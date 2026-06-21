@@ -1,9 +1,9 @@
 {
   "llm": {
     "endpoint": {
-      "providerType": "anthropic",
-      "model": "claude-haiku-4-5",
-      "apiKey": "env:ANTHROPIC_API_KEY"
+      "providerType": "llamacpp",
+      "model": "gemma-4-31B-it-f16.gguf",
+      "baseUrl": "http://192.168.1.201:9082/v1"
     },
     "deepEndpoint": {
       "providerType": "anthropic",

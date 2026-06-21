@@ -53,7 +53,8 @@ export class OpenAICompatProvider implements LLMProvider {
           max_tokens: params.maxTokens ?? 2000,
           stream: false,
         }),
-        signal: AbortSignal.timeout(120000),
+        // ローカルの reasoning モデルは低速(数 tok/s)になりうるため長めに設定
+        signal: AbortSignal.timeout(600000),
       });
       if (!res.ok) {
         yield { type: "error", error: `HTTP ${res.status} ${await res.text()}` };
