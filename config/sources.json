@@ -1,0 +1,78 @@
+[
+  {
+    "id": "arxiv-cs-ai",
+    "name": "arXiv cs.AI",
+    "url": "http://export.arxiv.org/rss/cs.AI",
+    "type": "rss",
+    "category": "論文・学術研究",
+    "enabled": true
+  },
+  {
+    "id": "arxiv-cs-cl",
+    "name": "arXiv cs.CL",
+    "url": "http://export.arxiv.org/rss/cs.CL",
+    "type": "rss",
+    "category": "論文・学術研究",
+    "enabled": false
+  },
+  {
+    "id": "huggingface-blog",
+    "name": "Hugging Face Blog",
+    "url": "https://huggingface.co/blog/feed.xml",
+    "type": "rss",
+    "category": "基盤技術・組織公式",
+    "enabled": true
+  },
+  {
+    "id": "cloudflare-blog",
+    "name": "Cloudflare Blog",
+    "url": "https://blog.cloudflare.com/rss/",
+    "type": "rss",
+    "category": "実務・アーキテクチャ・運用事例",
+    "enabled": true
+  },
+  {
+    "id": "publickey",
+    "name": "Publickey",
+    "url": "https://www.publickey1.jp/atom.xml",
+    "type": "rss",
+    "category": "国内エンタープライズ事例",
+    "enabled": false
+  },
+  {
+    "id": "vllm-releases",
+    "name": "vLLM Releases",
+    "url": "https://github.com/vllm-project/vllm",
+    "type": "github_release",
+    "category": "エコシステム・OSS動向",
+    "enabled": true
+  },
+  {
+    "id": "llamacpp-releases",
+    "name": "llama.cpp Releases",
+    "url": "https://github.com/ggml-org/llama.cpp",
+    "type": "github_release",
+    "category": "エコシステム・OSS動向",
+    "enabled": false
+  },
+  {
+    "id": "anthropic-news",
+    "name": "Anthropic News",
+    "url": "https://www.anthropic.com/news",
+    "type": "html",
+    "category": "基盤技術・組織公式",
+    "selector": "a[href*='/news/']",
+    "maxLinks": 15,
+    "enabled": false
+  },
+  {
+    "id": "openai-blog",
+    "name": "OpenAI Blog",
+    "url": "https://openai.com/news/",
+    "type": "html",
+    "category": "基盤技術・組織公式",
+    "selector": "a[href*='/index/']",
+    "maxLinks": 15,
+    "enabled": false
+  }
+]

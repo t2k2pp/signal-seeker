@@ -1,0 +1,16 @@
+{
+  "llm": {
+    "endpoint": {
+      "providerType": "anthropic",
+      "model": "claude-haiku-4-5",
+      "apiKey": "env:ANTHROPIC_API_KEY"
+    },
+    "deepEndpoint": {
+      "providerType": "anthropic",
+      "model": "claude-opus-4-8",
+      "apiKey": "env:ANTHROPIC_API_KEY"
+    }
+  },
+  "notify": { "targets": ["console", "discord"] },
+  "firstRunLimit": 5
+}

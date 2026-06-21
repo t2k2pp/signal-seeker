@@ -1,0 +1,29 @@
+{
+  "name": "signal-seeker",
+  "version": "0.1.0",
+  "description": "一次情報収集アプリ: Playwright巡回で差分取得 → 生成AIで客観ファクト要約 → Discord/コンソールへレポート送付",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "crawl": "tsx src/index.ts",
+    "crawl:dry": "tsx src/index.ts --dry-run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.0",
+    "better-sqlite3": "^12.4.1",
+    "dotenv": "^17.2.3",
+    "playwright": "^1.56.0",
+    "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.11.1": true,
+    "esbuild@0.28.1": true
+  }
+}
