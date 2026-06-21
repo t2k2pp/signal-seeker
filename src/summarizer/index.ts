@@ -1,5 +1,4 @@
-import type { AppConfig, Item, Source, SummarizedItem } from "../types.js";
-import type { ItemDiff } from "../db.js";
+import type { AppConfig, Item } from "../types.js";
 import { createProvider } from "../llm/provider-factory.js";
 import { collectResponse } from "../llm/base-provider.js";
 
@@ -17,7 +16,13 @@ const SYSTEM_PROMPT = `あなたは技術情報の客観的ファクト抽出器
 記事から確実に読み取れる事実のみを記載し、推測・意見・宣伝文句は含めないこと。
 該当するファクトが一切無い場合は「- 抽出すべき技術的ファクトなし」とだけ出力すること。`;
 
-/** Item → LLM に渡すテキスト。 */
+export interface SummaryResult {
+  sourceId: string;
+  itemKey: string;
+  /** 要約。失敗時は null。 */
+  summary: string | null;
+}
+
 function itemToText(item: Item): string {
   return [`タイトル: ${item.title}`, `URL: ${item.url}`, item.rawText ? `内容: ${item.rawText}` : ""]
     .filter(Boolean)
@@ -25,23 +30,19 @@ function itemToText(item: Item): string {
 }
 
 /**
- * 差分 Item 群を要約する。config.llm.endpoint のプロバイダで処理し、
+ * 未要約の記事群を要約する。config.llm.endpoint のプロバイダで処理し、
  * 失敗は item 単位で握って summary=null とし、全体は止めない。
  */
-export async function summarizeDiffs(
-  diffs: ItemDiff[],
-  sources: Source[],
-  config: AppConfig,
-): Promise<SummarizedItem[]> {
+export async function summarizeItems(items: Item[], config: AppConfig): Promise<SummaryResult[]> {
   const provider = createProvider(config.llm.endpoint);
-  const sourceMap = new Map(sources.map((s) => [s.id, s]));
-  const results: SummarizedItem[] = [];
+  const results: SummaryResult[] = [];
 
-  for (const diff of diffs) {
-    const item = diff.item;
-    const source = sourceMap.get(item.sourceId);
+  let i = 0;
+  for (const item of items) {
+    i++;
     let summary: string | null = null;
     try {
+      console.log(`  [summarize ${i}/${items.length}] ${item.sourceId} / ${item.title.slice(0, 50)}`);
       summary = await collectResponse(
         provider.chat({
           model: config.llm.endpoint.model,
@@ -50,16 +51,11 @@ export async function summarizeDiffs(
           maxTokens: 2000,
         }),
       );
+      if (!summary) summary = null;
     } catch (err) {
-      console.warn(`  [summarize] ${item.sourceId}/${item.title}: 失敗 — ${(err as Error).message}`);
+      console.warn(`    失敗 — ${(err as Error).message}`);
     }
-    results.push({
-      ...item,
-      sourceName: source?.name ?? item.sourceId,
-      category: source?.category ?? "未分類",
-      summary,
-      isNew: diff.kind === "new",
-    });
+    results.push({ sourceId: item.sourceId, itemKey: item.itemKey, summary });
   }
   return results;
 }

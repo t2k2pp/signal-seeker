@@ -30,14 +30,27 @@ export interface Item {
   rawText: string;
 }
 
-/** 差分(新規 or 更新)と判定された Item に要約を付与したもの。 */
+/** レポートでの記事の状態。new=今回新規 / updated=本文更新 / carried=過去のdry実行からの繰越。 */
+export type ItemState = "new" | "updated" | "carried";
+
+/** 要約付きの記事(レポート・Wikiで使う)。 */
 export interface SummarizedItem extends Item {
   sourceName: string;
   category: string;
-  /** 生成AIによる客観ファクト要約 (Markdown 箇条書き)。失敗時は null。 */
+  /** 生成AIによる客観ファクト要約 (Markdown 箇条書き)。未取得は null。 */
   summary: string | null;
-  /** 新規(true) か 更新(false) か。 */
-  isNew: boolean;
+  state: ItemState;
+}
+
+/** DB に永続化された記事1行(Wiki/再利用の基盤)。 */
+export interface StoredItem extends Item {
+  sourceName: string;
+  category: string;
+  summary: string | null;
+  /** 本実行でレポート配信済みなら true。dry実行では false のまま繰り越す。 */
+  reported: boolean;
+  firstSeenAt: string;
+  lastSeenAt: string;
 }
 
 // ---- LLM (lllmAgents のプロバイダ抽象を模倣) ----
@@ -58,6 +71,23 @@ export interface LLMEndpoint {
 
 export type NotifyTarget = "console" | "discord";
 
+/** 収集動作の設定。 */
+export interface CollectConfig {
+  /** 1記事あたり保持・要約に渡す最大文字数 (既定 8000)。 */
+  maxContentChars: number;
+  /** html型で各記事ページの本文も取得するか (既定 true)。 */
+  fetchArticleBody: boolean;
+}
+
+/** Obsidian Wiki 出力設定 (lllmAgents の ObsidianConfig 流儀)。 */
+export interface WikiConfig {
+  enabled: boolean;
+  /** vault の絶対 or プロジェクト相対パス (既定 "data/wiki")。 */
+  vaultPath: string;
+  /** 全ノートに付与する既定タグ (既定 ["signalseeker"])。 */
+  defaultTags?: string[];
+}
+
 export interface AppConfig {
   llm: {
     endpoint: LLMEndpoint;
@@ -67,6 +97,8 @@ export interface AppConfig {
   notify: { targets: NotifyTarget[] };
   /** 初回実行時、source毎に取り込む最大件数 (差分ノイズ抑制)。 */
   firstRunLimit: number;
+  collect: CollectConfig;
+  wiki: WikiConfig;
 }
 
 /** 1回の実行結果サマリ。 */

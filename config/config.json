@@ -12,5 +12,14 @@
     }
   },
   "notify": { "targets": ["console", "discord"] },
-  "firstRunLimit": 5
+  "firstRunLimit": 5,
+  "collect": {
+    "maxContentChars": 8000,
+    "fetchArticleBody": true
+  },
+  "wiki": {
+    "enabled": true,
+    "vaultPath": "data/wiki",
+    "defaultTags": ["signalseeker"]
+  }
 }

@@ -28,6 +28,20 @@ export function loadConfig(): AppConfig {
     throw new Error("config.json: notify.targets は配列で指定してください");
   }
   cfg.firstRunLimit ??= 5;
+
+  // collect の既定
+  cfg.collect = {
+    maxContentChars: cfg.collect?.maxContentChars ?? 8000,
+    fetchArticleBody: cfg.collect?.fetchArticleBody ?? true,
+  };
+
+  // wiki の既定
+  cfg.wiki = {
+    enabled: cfg.wiki?.enabled ?? true,
+    vaultPath: cfg.wiki?.vaultPath ?? "data/wiki",
+    defaultTags: cfg.wiki?.defaultTags ?? ["signalseeker"],
+  };
+
   return cfg;
 }
 

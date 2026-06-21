@@ -19,7 +19,7 @@ function resolveFeedUrl(source: Source): string {
 }
 
 /** RSS/Atom フィードから Item[] を取得する。ブラウザ不要。 */
-export async function collectRss(source: Source, limit: number): Promise<Item[]> {
+export async function collectRss(source: Source, limit: number, maxContentChars: number): Promise<Item[]> {
   const feedUrl = resolveFeedUrl(source);
   const feed = await parser.parseURL(feedUrl);
   const items: Item[] = [];
@@ -27,9 +27,13 @@ export async function collectRss(source: Source, limit: number): Promise<Item[]>
   for (const entry of (feed.items ?? []).slice(0, limit)) {
     const title = (entry.title ?? "(無題)").trim();
     const url = entry.link ?? feedUrl;
-    // 本文候補: contentSnippet(整形済) → content → summary(Atom要旨)。タグは除去。
-    const rawBody = entry.contentSnippet ?? entry.content ?? entry.summary ?? "";
-    const body = rawBody.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    // 本文候補: content(全文) → summary(Atom要旨) → contentSnippet(整形済)。タグ除去後に上限で切る。
+    const rawBody = entry.content ?? entry.summary ?? entry.contentSnippet ?? "";
+    const body = rawBody
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, maxContentChars);
     const itemKey = entry.link ?? title.toLowerCase();
     items.push({
       sourceId: source.id,

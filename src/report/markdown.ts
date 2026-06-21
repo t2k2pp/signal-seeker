@@ -29,7 +29,7 @@ export function buildMarkdown(result: RunResult): string {
       for (const [sourceName, items] of sources) {
         lines.push(`### ${sourceName}`, "");
         for (const item of items) {
-          const badge = item.isNew ? "🆕" : "♻️更新";
+          const badge = item.state === "new" ? "🆕" : item.state === "updated" ? "♻️更新" : "📥繰越";
           lines.push(`#### ${badge} [${item.title}](${item.url})`);
           if (item.publishedAt) lines.push(`*${item.publishedAt}*`);
           lines.push("");

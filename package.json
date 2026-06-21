@@ -7,6 +7,7 @@
   "scripts": {
     "crawl": "tsx src/index.ts",
     "crawl:dry": "tsx src/index.ts --dry-run",
+    "wiki": "tsx src/wiki/cli.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

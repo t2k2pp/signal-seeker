@@ -8,11 +8,12 @@ function truncate(s: string, n: number): string {
 }
 
 function toEmbed(item: SummarizedItem): Record<string, unknown> {
+  const badge = item.state === "new" ? "🆕 " : item.state === "updated" ? "♻️ " : "📥 ";
   return {
-    title: truncate(`${item.isNew ? "🆕 " : "♻️ "}${item.title}`, 256),
+    title: truncate(`${badge}${item.title}`, 256),
     url: item.url,
     description: truncate(item.summary?.trim() || "(要約なし)", EMBED_DESC_LIMIT),
-    color: item.isNew ? 0x2ecc71 : 0xf1c40f,
+    color: item.state === "new" ? 0x2ecc71 : item.state === "updated" ? 0xf1c40f : 0x95a5a6,
     footer: { text: `${item.category} / ${item.sourceName}` },
     ...(item.publishedAt ? { timestamp: new Date(item.publishedAt).toISOString() } : {}),
   };

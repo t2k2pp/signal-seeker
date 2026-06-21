@@ -1,4 +1,4 @@
-import type { Item, Source } from "../types.js";
+import type { CollectConfig, Item, Source } from "../types.js";
 import { collectRss } from "./rss.js";
 import { BrowserSession } from "./playwright.js";
 
@@ -11,7 +11,11 @@ export interface CollectResult {
  * 全ソースを source.type で分岐して巡回し、Item[] をまとめて返す。
  * html 型がある場合のみブラウザを起動し、最後に閉じる。
  */
-export async function collectAll(sources: Source[], perSourceLimit: number): Promise<CollectResult> {
+export async function collectAll(
+  sources: Source[],
+  perSourceLimit: number,
+  collect: CollectConfig,
+): Promise<CollectResult> {
   const items: Item[] = [];
   const errors: { sourceId: string; message: string }[] = [];
   const browser = new BrowserSession();
@@ -21,8 +25,12 @@ export async function collectAll(sources: Source[], perSourceLimit: number): Pro
       try {
         const collected =
           source.type === "html"
-            ? await browser.collectHtml(source, source.maxLinks ?? perSourceLimit)
-            : await collectRss(source, perSourceLimit);
+            ? await browser.collectHtml(source, {
+                limit: source.maxLinks ?? perSourceLimit,
+                maxContentChars: collect.maxContentChars,
+                fetchArticleBody: collect.fetchArticleBody,
+              })
+            : await collectRss(source, perSourceLimit, collect.maxContentChars);
         items.push(...collected);
         console.log(`  [collect] ${source.id}: ${collected.length}件`);
       } catch (err) {
