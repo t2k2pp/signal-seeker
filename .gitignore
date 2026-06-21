@@ -3,3 +3,4 @@ data/
 .env
 *.log
 dist/
+*_audit.json

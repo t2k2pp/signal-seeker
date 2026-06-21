@@ -16,8 +16,8 @@ export async function dispatchNotify(
 ): Promise<void> {
   const markdown = buildMarkdown(result);
 
-  // console はレポート生成の確認用に常に実行
-  const reportPath = notifyConsole(markdown);
+  // console はレポート生成の確認用に常に実行。ファイル名は実行ラベルで一意化(1日複数回でも上書きしない)
+  const reportPath = notifyConsole(markdown, logger.runLabel);
   logger.info("report_saved", { path: reportPath, items: result.summarized.length });
 
   if (dryRun) {
