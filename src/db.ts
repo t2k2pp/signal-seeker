@@ -82,6 +82,8 @@ export class Store {
         started_at  TEXT NOT NULL,
         finished_at TEXT,
         dry_run     INTEGER NOT NULL DEFAULT 0,
+        status      TEXT NOT NULL DEFAULT 'running',
+        log_label   TEXT,
         new_count   INTEGER NOT NULL DEFAULT 0,
         error       TEXT
       );
@@ -97,6 +99,12 @@ export class Store {
     addIfMissing("source_name", "source_name TEXT NOT NULL DEFAULT ''");
     addIfMissing("summary", "summary TEXT");
     addIfMissing("reported", "reported INTEGER NOT NULL DEFAULT 0");
+
+    const runCols = new Set(
+      (this.db.prepare("PRAGMA table_info(runs)").all() as { name: string }[]).map((c) => c.name),
+    );
+    if (!runCols.has("status")) this.db.exec("ALTER TABLE runs ADD COLUMN status TEXT NOT NULL DEFAULT 'running'");
+    if (!runCols.has("log_label")) this.db.exec("ALTER TABLE runs ADD COLUMN log_label TEXT");
   }
 
   /**
@@ -181,17 +189,111 @@ export class Store {
     return rows.map(rowToStored);
   }
 
-  startRun(dryRun: boolean): number {
+  // ---- 開発者向け閲覧クエリ(db-view CLI) ----
+
+  stats(): {
+    total: number;
+    summarized: number;
+    pending: number;
+    needingSummary: number;
+    byCategory: { category: string; count: number }[];
+    bySource: { sourceName: string; count: number }[];
+  } {
+    const scalar = (sql: string) => (this.db.prepare(sql).get() as { c: number }).c;
+    return {
+      total: scalar("SELECT COUNT(*) c FROM items"),
+      summarized: scalar("SELECT COUNT(*) c FROM items WHERE summary IS NOT NULL"),
+      pending: scalar("SELECT COUNT(*) c FROM items WHERE reported = 0"),
+      needingSummary: scalar("SELECT COUNT(*) c FROM items WHERE reported = 0 AND summary IS NULL"),
+      byCategory: this.db
+        .prepare("SELECT category, COUNT(*) count FROM items GROUP BY category ORDER BY count DESC")
+        .all() as { category: string; count: number }[],
+      bySource: this.db
+        .prepare("SELECT source_name AS sourceName, COUNT(*) count FROM items GROUP BY source_name ORDER BY count DESC")
+        .all() as { sourceName: string; count: number }[],
+    };
+  }
+
+  listItems(filter: {
+    sourceId?: string;
+    pending?: boolean;
+    needing?: boolean;
+    reported?: boolean;
+    limit?: number;
+  }): StoredItem[] {
+    const where: string[] = [];
+    const args: unknown[] = [];
+    if (filter.sourceId) {
+      where.push("source_id = ?");
+      args.push(filter.sourceId);
+    }
+    if (filter.pending) where.push("reported = 0");
+    if (filter.reported) where.push("reported = 1");
+    if (filter.needing) where.push("reported = 0 AND summary IS NULL");
+    const sql = `SELECT * FROM items ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY last_seen_at DESC LIMIT ?`;
+    args.push(filter.limit ?? 50);
+    return (this.db.prepare(sql).all(...args) as ItemRow[]).map(rowToStored);
+  }
+
+  searchItems(text: string, limit = 50): StoredItem[] {
+    const like = `%${text}%`;
+    return (
+      this.db
+        .prepare(
+          "SELECT * FROM items WHERE title LIKE ? OR summary LIKE ? OR raw_text LIKE ? ORDER BY last_seen_at DESC LIMIT ?",
+        )
+        .all(like, like, like, limit) as ItemRow[]
+    ).map(rowToStored);
+  }
+
+  getItem(sourceId: string, itemKey: string): StoredItem | null {
+    const row = this.db
+      .prepare("SELECT * FROM items WHERE source_id = ? AND item_key = ?")
+      .get(sourceId, itemKey) as ItemRow | undefined;
+    return row ? rowToStored(row) : null;
+  }
+
+  recentRuns(limit = 20): {
+    id: number;
+    started_at: string;
+    finished_at: string | null;
+    dry_run: number;
+    status: string;
+    new_count: number;
+    log_label: string | null;
+    error: string | null;
+  }[] {
+    return this.db
+      .prepare("SELECT id, started_at, finished_at, dry_run, status, new_count, log_label, error FROM runs ORDER BY id DESC LIMIT ?")
+      .all(limit) as never;
+  }
+
+  startRun(dryRun: boolean, logLabel: string): number {
     const info = this.db
-      .prepare("INSERT INTO runs (started_at, dry_run) VALUES (?, ?)")
-      .run(new Date().toISOString(), dryRun ? 1 : 0);
+      .prepare("INSERT INTO runs (started_at, dry_run, status, log_label) VALUES (?, ?, 'running', ?)")
+      .run(new Date().toISOString(), dryRun ? 1 : 0, logLabel);
     return Number(info.lastInsertRowid);
   }
 
-  finishRun(runId: number, newCount: number, error?: string): void {
+  finishRun(runId: number, status: "completed" | "failed", newCount: number, error?: string): void {
     this.db
-      .prepare("UPDATE runs SET finished_at = ?, new_count = ?, error = ? WHERE id = ?")
-      .run(new Date().toISOString(), newCount, error ?? null, runId);
+      .prepare("UPDATE runs SET finished_at = ?, status = ?, new_count = ?, error = ? WHERE id = ?")
+      .run(new Date().toISOString(), status, newCount, error ?? null, runId);
+  }
+
+  /** 前回までに完了しなかった(status='running' のまま残った)実行。中断検出用。 */
+  findInterruptedRuns(): { id: number; started_at: string; log_label: string | null }[] {
+    return this.db
+      .prepare("SELECT id, started_at, log_label FROM runs WHERE status = 'running' AND finished_at IS NULL ORDER BY id")
+      .all() as { id: number; started_at: string; log_label: string | null }[];
+  }
+
+  /** 起動時、過去の running を interrupted として確定させる(当該runを除く)。 */
+  markStaleRunsInterrupted(exceptRunId: number): number {
+    const info = this.db
+      .prepare("UPDATE runs SET status = 'interrupted' WHERE status = 'running' AND id != ?")
+      .run(exceptRunId);
+    return info.changes;
   }
 
   close(): void {

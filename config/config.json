@@ -14,12 +14,30 @@
   "notify": { "targets": ["console", "discord"] },
   "firstRunLimit": 5,
   "collect": {
-    "maxContentChars": 8000,
+    "maxContentChars": 800000,
     "fetchArticleBody": true
   },
   "wiki": {
     "enabled": true,
     "vaultPath": "data/wiki",
     "defaultTags": ["signalseeker"]
+  },
+  "runtime": {
+    "http": {
+      "llmChatTimeoutMs": 6000000,
+      "llmTestTimeoutMs": 50000,
+      "rssTimeoutMs": 20000,
+      "discordTimeoutMs": 150000,
+      "discordRetryUnitMs": 1000
+    },
+    "playwright": {
+      "navTimeoutMs": 30000,
+      "articleTimeoutMs": 25000
+    },
+    "logging": {
+      "dir": "data/logs",
+      "level": "info",
+      "maxIoChars": 0
+    }
   }
 }

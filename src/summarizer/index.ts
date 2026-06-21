@@ -1,6 +1,7 @@
 import type { AppConfig, Item } from "../types.js";
-import { createProvider } from "../llm/provider-factory.js";
-import { collectResponse } from "../llm/base-provider.js";
+import { createProvider, timeoutsFromRuntime } from "../llm/provider-factory.js";
+import { collectResponse, type Message } from "../llm/base-provider.js";
+import type { Logger } from "../logger.js";
 
 /** サンプル指定のファクト抽出プロンプト(煽り排除・4観点の客観ファクトのみ)。 */
 const SYSTEM_PROMPT = `あなたは技術情報の客観的ファクト抽出器です。
@@ -19,7 +20,6 @@ const SYSTEM_PROMPT = `あなたは技術情報の客観的ファクト抽出器
 export interface SummaryResult {
   sourceId: string;
   itemKey: string;
-  /** 要約。失敗時は null。 */
   summary: string | null;
 }
 
@@ -30,31 +30,51 @@ function itemToText(item: Item): string {
 }
 
 /**
- * 未要約の記事群を要約する。config.llm.endpoint のプロバイダで処理し、
- * 失敗は item 単位で握って summary=null とし、全体は止めない。
+ * 未要約の記事群を要約する。各 LLM 呼び出しの入出力・usage・所要msをログに残す。
+ * 失敗は item 単位で握って summary=null とし、全体は止めない(逐次永続化で再開可能)。
  */
-export async function summarizeItems(items: Item[], config: AppConfig): Promise<SummaryResult[]> {
-  const provider = createProvider(config.llm.endpoint);
+export async function summarizeItems(
+  items: Item[],
+  config: AppConfig,
+  logger: Logger,
+): Promise<SummaryResult[]> {
+  const provider = createProvider(config.llm.endpoint, timeoutsFromRuntime(config.runtime));
   const results: SummaryResult[] = [];
 
   let i = 0;
   for (const item of items) {
     i++;
+    const messages: Message[] = [{ role: "user", content: itemToText(item) }];
+    const started = Date.now();
     let summary: string | null = null;
+    let errMsg: string | undefined;
+    let usage: { promptTokens?: number; completionTokens?: number } | undefined;
+
+    console.log(`  [summarize ${i}/${items.length}] ${item.sourceId} / ${item.title.slice(0, 50)}`);
     try {
-      console.log(`  [summarize ${i}/${items.length}] ${item.sourceId} / ${item.title.slice(0, 50)}`);
-      summary = await collectResponse(
-        provider.chat({
-          model: config.llm.endpoint.model,
-          system: SYSTEM_PROMPT,
-          messages: [{ role: "user", content: itemToText(item) }],
-          maxTokens: 2000,
-        }),
+      const res = await collectResponse(
+        provider.chat({ model: config.llm.endpoint.model, system: SYSTEM_PROMPT, messages, maxTokens: 2000 }),
       );
-      if (!summary) summary = null;
+      summary = res.text || null;
+      usage = res.usage;
     } catch (err) {
-      console.warn(`    失敗 — ${(err as Error).message}`);
+      errMsg = (err as Error).message;
+      console.warn(`    失敗 — ${errMsg}`);
     }
+
+    logger.logLlmCall({
+      n: i,
+      providerType: config.llm.endpoint.providerType,
+      model: config.llm.endpoint.model,
+      system: SYSTEM_PROMPT,
+      messages,
+      output: summary,
+      usage,
+      ms: Date.now() - started,
+      error: errMsg,
+      context: { sourceId: item.sourceId, itemKey: item.itemKey, title: item.title },
+    });
+
     results.push({ sourceId: item.sourceId, itemKey: item.itemKey, summary });
   }
   return results;

@@ -1,7 +1,8 @@
 import type { AppConfig, RunResult } from "../types.js";
 import { buildMarkdown } from "../report/markdown.js";
 import { notifyConsole } from "./console.js";
-import { notifyDiscord } from "./discord.js";
+import { notifyDiscord, discordOptions } from "./discord.js";
+import type { Logger } from "../logger.js";
 
 /**
  * 有効な通知先へ fan-out する。console は常にファイル保存も行う。
@@ -11,22 +12,25 @@ export async function dispatchNotify(
   result: RunResult,
   config: AppConfig,
   dryRun: boolean,
+  logger: Logger,
 ): Promise<void> {
   const markdown = buildMarkdown(result);
 
   // console はレポート生成の確認用に常に実行
-  notifyConsole(markdown);
+  const reportPath = notifyConsole(markdown);
+  logger.info("report_saved", { path: reportPath, items: result.summarized.length });
 
   if (dryRun) {
-    console.log("[notify] --dry-run のため外部通知はスキップしました。");
+    logger.info("notify_skipped_dryrun");
     return;
   }
 
   if (config.notify.targets.includes("discord")) {
     try {
-      await notifyDiscord(result.summarized);
+      await notifyDiscord(result.summarized, discordOptions(config.runtime));
+      logger.info("discord_sent", { items: result.summarized.length });
     } catch (err) {
-      console.warn(`[notify] discord 失敗: ${(err as Error).message}`);
+      logger.error("discord_failed", { message: (err as Error).message });
     }
   }
 }

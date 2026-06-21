@@ -15,10 +15,17 @@ export interface ChatParams {
   maxTokens?: number;
 }
 
+export interface TokenUsage {
+  promptTokens?: number;
+  completionTokens?: number;
+}
+
 export interface ChatChunk {
   type: "text" | "done" | "error";
   text?: string;
   error?: string;
+  /** done チャンクに付与されるトークン使用量(取得できた場合)。 */
+  usage?: TokenUsage;
 }
 
 export interface LLMProvider {
@@ -28,12 +35,19 @@ export interface LLMProvider {
   chat(params: ChatParams): AsyncGenerator<ChatChunk>;
 }
 
-/** ストリームを最後まで読み、text を連結して返す。error チャンクで例外を投げる。 */
-export async function collectResponse(gen: AsyncGenerator<ChatChunk>): Promise<string> {
+export interface CollectedResponse {
+  text: string;
+  usage?: TokenUsage;
+}
+
+/** ストリームを最後まで読み、text と usage を返す。error チャンクで例外を投げる。 */
+export async function collectResponse(gen: AsyncGenerator<ChatChunk>): Promise<CollectedResponse> {
   let out = "";
+  let usage: TokenUsage | undefined;
   for await (const chunk of gen) {
     if (chunk.type === "text") out += chunk.text ?? "";
+    else if (chunk.type === "done") usage = chunk.usage ?? usage;
     else if (chunk.type === "error") throw new Error(chunk.error ?? "LLM error");
   }
-  return out.trim();
+  return { text: out.trim(), usage };
 }

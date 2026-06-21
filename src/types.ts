@@ -88,6 +88,38 @@ export interface WikiConfig {
   defaultTags?: string[];
 }
 
+export type LogLevel = "debug" | "info" | "warn" | "error";
+
+/** タイムアウト等の閾値・ログ設定。ハードコードせず config に集約。 */
+export interface RuntimeConfig {
+  http: {
+    /** LLM chat 応答のタイムアウト(ms)。ローカル低速モデル向けに大きめ可。 */
+    llmChatTimeoutMs: number;
+    /** LLM 接続確認のタイムアウト(ms)。 */
+    llmTestTimeoutMs: number;
+    /** RSS/Atom 取得のタイムアウト(ms)。 */
+    rssTimeoutMs: number;
+    /** Discord webhook のタイムアウト(ms)。 */
+    discordTimeoutMs: number;
+    /** Discord 429 リトライ時、retry-after(秒) に掛ける単位(ms)。標準は1000。 */
+    discordRetryUnitMs: number;
+  };
+  playwright: {
+    /** 一覧ページ goto のタイムアウト(ms)。 */
+    navTimeoutMs: number;
+    /** 記事ページ本文取得 goto のタイムアウト(ms)。 */
+    articleTimeoutMs: number;
+  };
+  logging: {
+    /** ログ出力ディレクトリ(相対 or 絶対、既定 "data/logs")。 */
+    dir: string;
+    /** コンソール出力の最小レベル。 */
+    level: LogLevel;
+    /** LLM IO ログの最大文字数 (0=無制限)。 */
+    maxIoChars: number;
+  };
+}
+
 export interface AppConfig {
   llm: {
     endpoint: LLMEndpoint;
@@ -99,6 +131,7 @@ export interface AppConfig {
   firstRunLimit: number;
   collect: CollectConfig;
   wiki: WikiConfig;
+  runtime: RuntimeConfig;
 }
 
 /** 1回の実行結果サマリ。 */

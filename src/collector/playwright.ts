@@ -7,6 +7,10 @@ export interface HtmlCollectOptions {
   maxContentChars: number;
   /** 各記事ページを開いて本文も取得するか。 */
   fetchArticleBody: boolean;
+  /** 一覧ページ goto のタイムアウト(ms)。 */
+  navTimeoutMs: number;
+  /** 記事ページ goto のタイムアウト(ms)。 */
+  articleTimeoutMs: number;
 }
 
 /** 複数ソースで1つのブラウザを使い回すためのハンドル。 */
@@ -28,7 +32,7 @@ export class BrowserSession {
     const browser = await this.ensure();
     const page = await browser.newPage();
     try {
-      await page.goto(source.url, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await page.goto(source.url, { waitUntil: "domcontentloaded", timeout: opts.navTimeoutMs });
       const selector = source.selector ?? "a";
       const links = await page.$$eval(selector, (els) =>
         (els as HTMLAnchorElement[]).map((el) => ({
@@ -51,7 +55,7 @@ export class BrowserSession {
       for (const link of picked) {
         let body = link.text;
         if (opts.fetchArticleBody) {
-          const fetched = await this.fetchBody(browser, link.href, opts.maxContentChars);
+          const fetched = await this.fetchBody(browser, link.href, opts.maxContentChars, opts.articleTimeoutMs);
           if (fetched) body = fetched;
         }
         items.push({
@@ -71,10 +75,10 @@ export class BrowserSession {
   }
 
   /** 記事ページを開き、本文らしき要素のテキストを取得する。失敗時は null。 */
-  private async fetchBody(browser: Browser, url: string, maxChars: number): Promise<string | null> {
+  private async fetchBody(browser: Browser, url: string, maxChars: number, timeoutMs: number): Promise<string | null> {
     const page = await browser.newPage();
     try {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 25000 });
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: timeoutMs });
       const text = await page.evaluate(() => {
         const pick = (sel: string): string => {
           const el = document.querySelector(sel) as HTMLElement | null;

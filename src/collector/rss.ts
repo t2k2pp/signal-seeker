@@ -4,10 +4,13 @@ import { hashContent } from "../db.js";
 
 // Atom の <summary>(arXiv API の要旨など)を拾えるよう customField を追加。
 type ExtraFields = { summary?: string };
-const parser = new Parser<unknown, ExtraFields>({
-  timeout: 20000,
-  customFields: { item: ["summary"] },
-});
+
+function makeParser(timeoutMs: number): Parser<unknown, ExtraFields> {
+  return new Parser<unknown, ExtraFields>({
+    timeout: timeoutMs,
+    customFields: { item: ["summary"] },
+  });
+}
 
 /** github_release 型は repo URL を releases.atom に正規化する。 */
 function resolveFeedUrl(source: Source): string {
@@ -19,9 +22,14 @@ function resolveFeedUrl(source: Source): string {
 }
 
 /** RSS/Atom フィードから Item[] を取得する。ブラウザ不要。 */
-export async function collectRss(source: Source, limit: number, maxContentChars: number): Promise<Item[]> {
+export async function collectRss(
+  source: Source,
+  limit: number,
+  maxContentChars: number,
+  timeoutMs: number,
+): Promise<Item[]> {
   const feedUrl = resolveFeedUrl(source);
-  const feed = await parser.parseURL(feedUrl);
+  const feed = await makeParser(timeoutMs).parseURL(feedUrl);
   const items: Item[] = [];
 
   for (const entry of (feed.items ?? []).slice(0, limit)) {
