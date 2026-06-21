@@ -2,15 +2,24 @@
   {
     "id": "arxiv-cs-ai",
     "name": "arXiv cs.AI",
-    "url": "http://export.arxiv.org/rss/cs.AI",
+    "url": "http://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=submittedDate&sortOrder=descending&max_results=15",
     "type": "rss",
     "category": "論文・学術研究",
-    "enabled": true
+    "enabled": true,
+    "_note": "arXivのRSS(rss.arxiv.org)は更新タイミングで空になるため、確実に取得できる公式Atom APIを使用"
   },
   {
     "id": "arxiv-cs-cl",
     "name": "arXiv cs.CL",
-    "url": "http://export.arxiv.org/rss/cs.CL",
+    "url": "http://export.arxiv.org/api/query?search_query=cat:cs.CL&sortBy=submittedDate&sortOrder=descending&max_results=15",
+    "type": "rss",
+    "category": "論文・学術研究",
+    "enabled": false
+  },
+  {
+    "id": "arxiv-cs-lg",
+    "name": "arXiv cs.LG",
+    "url": "http://export.arxiv.org/api/query?search_query=cat:cs.LG&sortBy=submittedDate&sortOrder=descending&max_results=15",
     "type": "rss",
     "category": "論文・学術研究",
     "enabled": false

@@ -10,6 +10,18 @@ Collect (Playwright + RSS)  →  Summarize (Claude / ローカルLLM)  →  Noti
 「欲しい情報を変える」操作は **訪問先リスト `config/sources.json` の編集だけ** で完結します。
 リストのメンテナンスは別ツール想定で、本アプリはリストを読み取るのみです。
 
+## 生成AIの使用範囲(設計方針)
+
+生成AIを使うのは **② 概要化の1箇所だけ** です。取得・差分判定・レポート送付は AI を使わない決定的処理で、
+取得先の選定が適切であれば LLM コストは要約に集約されます。
+
+| 段階 | 担当 | 生成AI | 内容 |
+| --- | --- | --- | --- |
+| ① 取得 | `src/collector/` | **不使用** | rss-parser でフィード取得 / Playwright で DOM 抽出 |
+| 差分判定 | `src/db.ts` | **不使用** | `content_hash` の比較で新規・更新を検知(SHA-256) |
+| ② 概要化 | `src/summarizer/` + `src/llm/` | **使用** | Claude / ローカルLLM で4観点の客観ファクト抽出 |
+| ③ 送付 | `src/report/` + `src/notify/` | **不使用** | Markdown 整形 + Discord Webhook / コンソール |
+
 ## セットアップ
 
 ```bash

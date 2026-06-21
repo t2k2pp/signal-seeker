@@ -2,7 +2,12 @@ import Parser from "rss-parser";
 import type { Item, Source } from "../types.js";
 import { hashContent } from "../db.js";
 
-const parser = new Parser({ timeout: 20000 });
+// Atom の <summary>(arXiv API の要旨など)を拾えるよう customField を追加。
+type ExtraFields = { summary?: string };
+const parser = new Parser<unknown, ExtraFields>({
+  timeout: 20000,
+  customFields: { item: ["summary"] },
+});
 
 /** github_release 型は repo URL を releases.atom に正規化する。 */
 function resolveFeedUrl(source: Source): string {
@@ -22,7 +27,9 @@ export async function collectRss(source: Source, limit: number): Promise<Item[]>
   for (const entry of (feed.items ?? []).slice(0, limit)) {
     const title = (entry.title ?? "(無題)").trim();
     const url = entry.link ?? feedUrl;
-    const body = (entry.contentSnippet ?? entry.content ?? "").trim();
+    // 本文候補: contentSnippet(整形済) → content → summary(Atom要旨)。タグは除去。
+    const rawBody = entry.contentSnippet ?? entry.content ?? entry.summary ?? "";
+    const body = rawBody.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     const itemKey = entry.link ?? title.toLowerCase();
     items.push({
       sourceId: source.id,
