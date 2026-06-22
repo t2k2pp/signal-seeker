@@ -37,6 +37,18 @@ function renderOthers(others: SummarizedItem[], lines: string[]): void {
 
 const groupTop = (g: SeriesGroup[]) => g[0]?.primary.score ?? 0;
 
+/** GitHub互換の見出しアンカーを作る(目次リンク用)。記号除去・小文字・空白を-に。 */
+function anchor(heading: string): string {
+  return heading
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
+/** グループ配列の総記事数(代表+同系列の関連)。 */
+const blockCount = (groups: SeriesGroup[]) => groups.reduce((a, g) => a + 1 + g.others.length, 0);
+
 /**
  * カテゴリ→ソース→記事 の階層でMarkdownレポートを生成する。
  * curation 設定に従い、重要度スコアで並べ替え、同一リリース系列を集約し、注目度を併記する。
@@ -81,6 +93,17 @@ export function buildMarkdown(result: RunResult, curation: CurationConfig): stri
           Math.max(...a.sources.map((s) => groupTop(s.groups)), 0),
       );
     }
+
+    // 目次(カテゴリ→ソース、記事数付き。表示順は本文と一致)
+    lines.push("## 目次", "");
+    for (const cb of catBlocks) {
+      const catCount = cb.sources.reduce((a, s) => a + blockCount(s.groups), 0);
+      lines.push(`- [${cb.category}](#${anchor(cb.category)}) (${catCount}件)`);
+      for (const sb of cb.sources) {
+        lines.push(`  - [${sb.sourceName}](#${anchor(sb.sourceName)}) (${blockCount(sb.groups)}件)`);
+      }
+    }
+    lines.push("", "---", "");
 
     for (const cb of catBlocks) {
       lines.push(`## ${cb.category}`, "");

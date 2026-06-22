@@ -63,8 +63,8 @@
     "url": "https://ai.meta.com/blog/",
     "type": "html",
     "category": "基盤技術・組織公式",
-    "enabled": false,
-    "_note": "フィード未検出。汎用HTML抽出対象(JS描画が重い場合あり)"
+    "enabled": true,
+    "_note": "フィード無し。汎用HTML抽出で取得確認済み(本文4-9k字)"
   },
   {
     "id": "huggingface-blog",
@@ -103,7 +103,7 @@
     "type": "html",
     "category": "キーパーソン",
     "enabled": false,
-    "_note": "Hassabis/Amodei/Altman/LeCun/Karpathy 等。X APIまたは認証が必要で汎用収集不可。別機構で対応予定"
+    "_note": "Hassabis/Amodei/Altman/LeCun/Karpathy 等。Xはログイン必須で汎用機構では取得不可。X API・Nitter等のRSS代替のいずれで対応するか方針未決(要相談)"
   },
   {
     "id": "arxiv-cs-ai",
@@ -166,8 +166,8 @@
     "url": "https://www.llamaindex.ai/blog",
     "type": "html",
     "category": "エコシステム・OSS動向",
-    "enabled": false,
-    "_note": "フィード未検出。汎用HTML抽出対象"
+    "enabled": true,
+    "_note": "フィード無し。汎用HTML抽出で取得確認済み"
   },
   {
     "id": "llamaindex-releases",
@@ -222,8 +222,8 @@
     "url": "https://github.com/trending",
     "type": "html",
     "category": "アグリゲーター・トレンド",
-    "enabled": false,
-    "_note": "公式フィード無し。汎用HTML抽出対象だが構造変化に弱い"
+    "enabled": true,
+    "_note": "公式フィード無し。汎用HTML抽出で取得確認済み"
   },
   {
     "id": "import-ai",
@@ -278,7 +278,7 @@
     "type": "html",
     "category": "実務・アーキテクチャ・運用事例",
     "enabled": false,
-    "_note": "406でフィード未取得。要個別確認"
+    "_note": "フィード無し・トップは406でブロック。汎用HTML抽出の可否は未確認"
   },
   {
     "id": "aws-architecture",
@@ -286,8 +286,8 @@
     "url": "https://aws.amazon.com/architecture/",
     "type": "html",
     "category": "実務・アーキテクチャ・運用事例",
-    "enabled": false,
-    "_note": "大規模HTML・更新検知に不向き。別機構で対応予定"
+    "enabled": true,
+    "_note": "汎用HTML抽出で取得確認済み(参照系のため更新頻度は低め)"
   },
   {
     "id": "publickey",
@@ -312,15 +312,15 @@
     "type": "html",
     "category": "Web標準・プロトコル・セキュリティ",
     "enabled": false,
-    "_note": "NVDはAPI/データフィード前提。別機構で対応予定"
+    "_note": "RSS無し・トップは検索UIで汎用抽出に不向き。CVE取得はNVD JSON API(2.0)対応が必要(実装可・要相談)"
   },
   {
     "id": "ietf-rfc",
     "name": "IETF RFC (新着)",
-    "url": "https://datatracker.ietf.org/",
-    "type": "html",
+    "url": "https://www.rfc-editor.org/",
+    "feedUrl": "https://www.rfc-editor.org/rfcrss.xml",
     "category": "Web標準・プロトコル・セキュリティ",
-    "enabled": false,
-    "_note": "RFC新着フィードあり。必要時に専用URLでenable"
+    "enabled": true,
+    "_note": "RFC Editor の新着RFCフィード"
   }
 ]
