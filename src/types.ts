@@ -111,6 +111,8 @@ export interface CollectConfig {
   fetchArticleBody: boolean;
   /** RSS本文がこの文字数未満なら記事ページ本文で補完する (0=補完しない。既定 400)。 */
   articleBodyMinChars: number;
+  /** 同一ホストへの連続アクセスの最小間隔(ms)。レート制限(Reddit等)対策。0=無効。既定 4000。 */
+  perHostMinIntervalMs: number;
 }
 
 /** Obsidian Wiki 出力設定 (lllmAgents の ObsidianConfig 流儀)。 */

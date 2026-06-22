@@ -61,6 +61,27 @@ export async function collectAll(
   const errors: { sourceId: string; message: string }[] = [];
   const browser = new BrowserSession();
 
+  // 同一ホストへの連続アクセスを最小間隔まで待つ(Reddit等のレート制限対策)。
+  const lastHostAt = new Map<string, number>();
+  const throttleHost = async (u: string): Promise<void> => {
+    if (collect.perHostMinIntervalMs <= 0) return;
+    let host: string;
+    try {
+      host = new URL(u).host;
+    } catch {
+      return;
+    }
+    const last = lastHostAt.get(host);
+    if (last !== undefined) {
+      const wait = collect.perHostMinIntervalMs - (Date.now() - last);
+      if (wait > 0) {
+        logger.debug("host_throttle", { host, waitMs: wait });
+        await new Promise((r) => setTimeout(r, wait));
+      }
+    }
+    lastHostAt.set(host, Date.now());
+  };
+
   try {
     for (const source of sources) {
       try {
@@ -68,6 +89,7 @@ export async function collectAll(
         const limit = source.maxLinks ?? perSourceLimit;
         let collected: Item[];
         if (strategy.kind === "rss") {
+          await throttleHost(strategy.feedUrl);
           collected = await collectRss(source, strategy.feedUrl, limit, collect.maxContentChars, runtime.http.rssTimeoutMs);
           // フィード本文が薄い記事は、記事ページ本文を汎用抽出で補完(サイト別セレクタ不要)
           if (collect.fetchArticleBody && collect.articleBodyMinChars > 0) {
@@ -75,6 +97,7 @@ export async function collectAll(
             for (const item of collected) {
               if (item.rawText.length >= collect.articleBodyMinChars) continue;
               if (!/^https?:\/\//.test(item.url)) continue;
+              await throttleHost(item.url);
               const body = await browser.fetchArticle(item.url, collect.maxContentChars, runtime.playwright.articleTimeoutMs);
               if (body && body.length > item.rawText.length) {
                 item.rawText = body;
@@ -85,6 +108,7 @@ export async function collectAll(
             if (backfilled > 0) logger.info("article_backfilled", { sourceId: source.id, backfilled });
           }
         } else {
+          await throttleHost(source.url);
           collected = await browser.collectHtml(source, {
             limit,
             maxContentChars: collect.maxContentChars,

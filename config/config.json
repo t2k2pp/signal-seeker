@@ -16,7 +16,8 @@
   "collect": {
     "maxContentChars": 800000,
     "fetchArticleBody": true,
-    "articleBodyMinChars": 400
+    "articleBodyMinChars": 400,
+    "perHostMinIntervalMs": 4000
   },
   "curation": {
     "rankByScore": true,

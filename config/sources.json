@@ -106,6 +106,14 @@
     "_note": "Hassabis/Amodei/Altman/LeCun/Karpathy 等。Xはログイン必須で汎用機構では取得不可。X API・Nitter等のRSS代替のいずれで対応するか方針未決(要相談)"
   },
   {
+    "id": "reddit-keypersons",
+    "name": "Reddit キーパーソン話題",
+    "url": "https://www.reddit.com/search.rss?q=Karpathy%20OR%20LeCun%20OR%20Altman%20OR%20Hassabis%20OR%20Amodei&sort=new&t=week",
+    "category": "キーパーソン",
+    "enabled": true,
+    "_note": "Reddit検索フィードでキーパーソン/オピニオンリーダーの話題を収集。検索APIは429になりやすく取得は最善努力(失敗は記録して継続)"
+  },
+  {
     "id": "arxiv-cs-ai",
     "name": "arXiv cs.AI",
     "url": "http://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=submittedDate&sortOrder=descending&max_results=15",
@@ -224,6 +232,14 @@
     "category": "アグリゲーター・トレンド",
     "enabled": true,
     "_note": "公式フィード無し。汎用HTML抽出で取得確認済み"
+  },
+  {
+    "id": "reddit-ai-hot",
+    "name": "Reddit AI Hot",
+    "url": "https://www.reddit.com/r/LocalLLaMA+MachineLearning+artificial+singularity/hot/.rss",
+    "category": "アグリゲーター・トレンド",
+    "enabled": true,
+    "_note": "複数サブレを+で1フィードに束ねHotな話題を収集。Redditは既定UAで取得可(カスタムUAは429)"
   },
   {
     "id": "import-ai",

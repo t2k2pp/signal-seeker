@@ -36,6 +36,7 @@ export function loadConfig(): AppConfig {
     maxContentChars: cfg.collect?.maxContentChars ?? 8000,
     fetchArticleBody: cfg.collect?.fetchArticleBody ?? true,
     articleBodyMinChars: cfg.collect?.articleBodyMinChars ?? 400,
+    perHostMinIntervalMs: cfg.collect?.perHostMinIntervalMs ?? 4000,
   };
 
   const cu = cfg.curation ?? ({} as AppConfig["curation"]);
