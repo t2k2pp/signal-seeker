@@ -1,18 +1,122 @@
 [
   {
+    "id": "deepmind-blog",
+    "name": "Google DeepMind Blog",
+    "url": "https://deepmind.google/discover/blog/",
+    "category": "基盤技術・組織公式",
+    "enabled": true
+  },
+  {
+    "id": "google-dev-ai",
+    "name": "Google for Developers (AI)",
+    "url": "https://developers.googleblog.com/",
+    "category": "基盤技術・組織公式",
+    "enabled": false,
+    "_note": "Bloggerフィード(/rss)は取得可だがAI以外も混在。必要時にenable"
+  },
+  {
+    "id": "gemini-api-changelog",
+    "name": "Gemini API Changelog",
+    "url": "https://ai.google.dev/gemini-api/docs/changelog",
+    "type": "html",
+    "category": "基盤技術・組織公式",
+    "enabled": false,
+    "_note": "changelogページ。フィード無し・汎用HTML抽出対象"
+  },
+  {
+    "id": "anthropic-news",
+    "name": "Anthropic News",
+    "url": "https://www.anthropic.com/news",
+    "type": "html",
+    "category": "基盤技術・組織公式",
+    "enabled": true,
+    "_note": "フィード無し。汎用HTML抽出(セレクタ不要)で取得"
+  },
+  {
+    "id": "anthropic-research",
+    "name": "Anthropic Research",
+    "url": "https://www.anthropic.com/research",
+    "type": "html",
+    "category": "基盤技術・組織公式",
+    "enabled": false,
+    "_note": "Newsと重複しがち。必要時にenable"
+  },
+  {
+    "id": "anthropic-release-notes",
+    "name": "Anthropic Release Notes",
+    "url": "https://docs.anthropic.com/en/release-notes/overview",
+    "type": "html",
+    "category": "基盤技術・組織公式",
+    "enabled": false,
+    "_note": "フィード無し。汎用HTML抽出対象"
+  },
+  {
+    "id": "openai-news",
+    "name": "OpenAI News",
+    "url": "https://openai.com/news/",
+    "category": "基盤技術・組織公式",
+    "enabled": true
+  },
+  {
+    "id": "meta-ai-blog",
+    "name": "Meta AI Blog",
+    "url": "https://ai.meta.com/blog/",
+    "type": "html",
+    "category": "基盤技術・組織公式",
+    "enabled": false,
+    "_note": "フィード未検出。汎用HTML抽出対象(JS描画が重い場合あり)"
+  },
+  {
+    "id": "huggingface-blog",
+    "name": "Hugging Face Blog",
+    "url": "https://huggingface.co/blog/feed.xml",
+    "category": "基盤技術・組織公式",
+    "enabled": true
+  },
+  {
+    "id": "mistral-news",
+    "name": "Mistral AI News",
+    "url": "https://mistral.ai/news/",
+    "category": "基盤技術・組織公式",
+    "enabled": true
+  },
+  {
+    "id": "cohere-blog",
+    "name": "Cohere Blog",
+    "url": "https://cohere.com/blog",
+    "category": "基盤技術・組織公式",
+    "enabled": false,
+    "_note": "txt.cohere.com は移転/不安定。要フィード再確認"
+  },
+  {
+    "id": "nvidia-ai-blog",
+    "name": "NVIDIA Technical Blog",
+    "url": "https://developer.nvidia.com/blog",
+    "category": "基盤技術・組織公式",
+    "enabled": true,
+    "_note": "AI以外も含む。フィード(/blog/rss)自動発見"
+  },
+  {
+    "id": "keyperson-x-feeds",
+    "name": "キーパーソン X/SNS フィード",
+    "url": "https://x.com/",
+    "type": "html",
+    "category": "キーパーソン",
+    "enabled": false,
+    "_note": "Hassabis/Amodei/Altman/LeCun/Karpathy 等。X APIまたは認証が必要で汎用収集不可。別機構で対応予定"
+  },
+  {
     "id": "arxiv-cs-ai",
     "name": "arXiv cs.AI",
     "url": "http://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=submittedDate&sortOrder=descending&max_results=15",
-    "type": "rss",
     "category": "論文・学術研究",
     "enabled": true,
-    "_note": "arXivのRSS(rss.arxiv.org)は更新タイミングで空になるため、確実に取得できる公式Atom APIを使用"
+    "_note": "公式Atom API(rss.arxiv.orgは空になることがあるため)"
   },
   {
     "id": "arxiv-cs-cl",
     "name": "arXiv cs.CL",
     "url": "http://export.arxiv.org/api/query?search_query=cat:cs.CL&sortBy=submittedDate&sortOrder=descending&max_results=15",
-    "type": "rss",
     "category": "論文・学術研究",
     "enabled": false
   },
@@ -20,32 +124,57 @@
     "id": "arxiv-cs-lg",
     "name": "arXiv cs.LG",
     "url": "http://export.arxiv.org/api/query?search_query=cat:cs.LG&sortBy=submittedDate&sortOrder=descending&max_results=15",
-    "type": "rss",
     "category": "論文・学術研究",
     "enabled": false
   },
   {
-    "id": "huggingface-blog",
-    "name": "Hugging Face Blog",
-    "url": "https://huggingface.co/blog/feed.xml",
-    "type": "rss",
-    "category": "基盤技術・組織公式",
+    "id": "hf-daily-papers",
+    "name": "Hugging Face Daily Papers",
+    "url": "https://huggingface.co/papers",
+    "type": "html",
+    "category": "論文・学術研究",
+    "enabled": false,
+    "_note": "フィード無し・JS描画。注目度(HF upvote)は attention 取得側で個別論文に付与"
+  },
+  {
+    "id": "paperswithcode",
+    "name": "Papers with Code",
+    "url": "https://paperswithcode.com/",
+    "type": "html",
+    "category": "論文・学術研究",
+    "enabled": false,
+    "_note": "フィード無し・JS描画が重い"
+  },
+  {
+    "id": "langchain-blog",
+    "name": "LangChain Blog",
+    "url": "https://blog.langchain.dev/",
+    "category": "エコシステム・OSS動向",
     "enabled": true
   },
   {
-    "id": "cloudflare-blog",
-    "name": "Cloudflare Blog",
-    "url": "https://blog.cloudflare.com/rss/",
-    "type": "rss",
-    "category": "実務・アーキテクチャ・運用事例",
-    "enabled": true
+    "id": "langchain-releases",
+    "name": "LangChain Releases",
+    "url": "https://github.com/langchain-ai/langchain",
+    "type": "github_release",
+    "category": "エコシステム・OSS動向",
+    "enabled": false
   },
   {
-    "id": "publickey",
-    "name": "Publickey",
-    "url": "https://www.publickey1.jp/atom.xml",
-    "type": "rss",
-    "category": "国内エンタープライズ事例",
+    "id": "llamaindex-blog",
+    "name": "LlamaIndex Blog",
+    "url": "https://www.llamaindex.ai/blog",
+    "type": "html",
+    "category": "エコシステム・OSS動向",
+    "enabled": false,
+    "_note": "フィード未検出。汎用HTML抽出対象"
+  },
+  {
+    "id": "llamaindex-releases",
+    "name": "LlamaIndex Releases",
+    "url": "https://github.com/run-llama/llama_index",
+    "type": "github_release",
+    "category": "エコシステム・OSS動向",
     "enabled": false
   },
   {
@@ -65,23 +194,133 @@
     "enabled": false
   },
   {
-    "id": "anthropic-news",
-    "name": "Anthropic News",
-    "url": "https://www.anthropic.com/news",
-    "type": "html",
-    "category": "基盤技術・組織公式",
-    "selector": "a[href*='/news/']",
-    "maxLinks": 15,
+    "id": "ollama-blog",
+    "name": "Ollama Blog",
+    "url": "https://ollama.com/blog",
+    "category": "エコシステム・OSS動向",
+    "enabled": true
+  },
+  {
+    "id": "ollama-releases",
+    "name": "Ollama Releases",
+    "url": "https://github.com/ollama/ollama",
+    "type": "github_release",
+    "category": "エコシステム・OSS動向",
     "enabled": false
   },
   {
-    "id": "openai-blog",
-    "name": "OpenAI Blog",
-    "url": "https://openai.com/news/",
+    "id": "hackernews",
+    "name": "Hacker News",
+    "url": "https://news.ycombinator.com/rss",
+    "category": "アグリゲーター・トレンド",
+    "enabled": false,
+    "_note": "全分野・高ノイズ。要約コストが大きいため既定OFF"
+  },
+  {
+    "id": "github-trending",
+    "name": "GitHub Trending",
+    "url": "https://github.com/trending",
     "type": "html",
-    "category": "基盤技術・組織公式",
-    "selector": "a[href*='/index/']",
-    "maxLinks": 15,
-    "enabled": false
+    "category": "アグリゲーター・トレンド",
+    "enabled": false,
+    "_note": "公式フィード無し。汎用HTML抽出対象だが構造変化に弱い"
+  },
+  {
+    "id": "import-ai",
+    "name": "Import AI (Jack Clark)",
+    "url": "https://importai.substack.com/",
+    "category": "アグリゲーター・トレンド",
+    "enabled": true
+  },
+  {
+    "id": "ahead-of-ai",
+    "name": "Ahead of AI (Sebastian Raschka)",
+    "url": "https://magazine.sebastianraschka.com/",
+    "category": "アグリゲーター・トレンド",
+    "enabled": false,
+    "_note": "Substackフィードあり。必要時にenable"
+  },
+  {
+    "id": "tldr-ai",
+    "name": "TLDR AI",
+    "url": "https://tldr.tech/ai",
+    "category": "アグリゲーター・トレンド",
+    "enabled": false,
+    "_note": "フィード(/rss)取得可。必要時にenable"
+  },
+  {
+    "id": "cloudflare-blog",
+    "name": "Cloudflare Blog",
+    "url": "https://blog.cloudflare.com/rss/",
+    "category": "実務・アーキテクチャ・運用事例",
+    "enabled": true
+  },
+  {
+    "id": "netflix-techblog",
+    "name": "Netflix TechBlog",
+    "url": "https://netflixtechblog.com/",
+    "feedUrl": "https://netflixtechblog.com/feed",
+    "category": "実務・アーキテクチャ・運用事例",
+    "enabled": false,
+    "_note": "Medium。トップは収集側UAを弾くため feedUrl を明示。必要時にenable"
+  },
+  {
+    "id": "meta-engineering",
+    "name": "Meta Engineering",
+    "url": "https://engineering.fb.com/",
+    "category": "実務・アーキテクチャ・運用事例",
+    "enabled": true
+  },
+  {
+    "id": "uber-engineering",
+    "name": "Uber Engineering",
+    "url": "https://www.uber.com/en-JP/blog/engineering/",
+    "type": "html",
+    "category": "実務・アーキテクチャ・運用事例",
+    "enabled": false,
+    "_note": "406でフィード未取得。要個別確認"
+  },
+  {
+    "id": "aws-architecture",
+    "name": "AWS Architecture Center",
+    "url": "https://aws.amazon.com/architecture/",
+    "type": "html",
+    "category": "実務・アーキテクチャ・運用事例",
+    "enabled": false,
+    "_note": "大規模HTML・更新検知に不向き。別機構で対応予定"
+  },
+  {
+    "id": "publickey",
+    "name": "Publickey",
+    "url": "https://www.publickey1.jp/atom.xml",
+    "category": "実務・アーキテクチャ・運用事例",
+    "enabled": true
+  },
+  {
+    "id": "zenn-enterprises",
+    "name": "Zenn 企業テックブログ",
+    "url": "https://zenn.dev/enterprises",
+    "type": "html",
+    "category": "実務・アーキテクチャ・運用事例",
+    "enabled": false,
+    "_note": "要スクリーニング。Zennは各記事/フィードが分散"
+  },
+  {
+    "id": "nvd-vulnerabilities",
+    "name": "NVD (脆弱性DB)",
+    "url": "https://nvd.nist.gov/",
+    "type": "html",
+    "category": "Web標準・プロトコル・セキュリティ",
+    "enabled": false,
+    "_note": "NVDはAPI/データフィード前提。別機構で対応予定"
+  },
+  {
+    "id": "ietf-rfc",
+    "name": "IETF RFC (新着)",
+    "url": "https://datatracker.ietf.org/",
+    "type": "html",
+    "category": "Web標準・プロトコル・セキュリティ",
+    "enabled": false,
+    "_note": "RFC新着フィードあり。必要時に専用URLでenable"
   }
 ]

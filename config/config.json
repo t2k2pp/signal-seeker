@@ -15,7 +15,8 @@
   "firstRunLimit": 5,
   "collect": {
     "maxContentChars": 800000,
-    "fetchArticleBody": true
+    "fetchArticleBody": true,
+    "articleBodyMinChars": 400
   },
   "curation": {
     "rankByScore": true,

@@ -12,23 +12,14 @@ function makeParser(timeoutMs: number): Parser<unknown, ExtraFields> {
   });
 }
 
-/** github_release 型は repo URL を releases.atom に正規化する。 */
-function resolveFeedUrl(source: Source): string {
-  if (source.type === "github_release") {
-    if (source.url.endsWith(".atom")) return source.url;
-    return `${source.url.replace(/\/+$/, "")}/releases.atom`;
-  }
-  return source.url;
-}
-
-/** RSS/Atom フィードから Item[] を取得する。ブラウザ不要。 */
+/** RSS/Atom フィードから Item[] を取得する。ブラウザ不要。feedUrl は戦略解決側で確定済み。 */
 export async function collectRss(
   source: Source,
+  feedUrl: string,
   limit: number,
   maxContentChars: number,
   timeoutMs: number,
 ): Promise<Item[]> {
-  const feedUrl = resolveFeedUrl(source);
   const feed = await makeParser(timeoutMs).parseURL(feedUrl);
   const items: Item[] = [];
 

@@ -64,7 +64,7 @@ function printSources(): void {
   const sources = loadAllSources();
   console.log(`=== sources (${sources.length}) ===`);
   for (const s of sources) {
-    console.log(`[${s.enabled ? "x" : " "}] ${s.id.padEnd(20)} ${s.type.padEnd(15)} ${s.name}`);
+    console.log(`[${s.enabled ? "x" : " "}] ${s.id.padEnd(20)} ${(s.type ?? "auto").padEnd(15)} ${s.name}`);
     console.log(`      ${s.url}`);
   }
 }

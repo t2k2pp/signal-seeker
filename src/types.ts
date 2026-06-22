@@ -1,18 +1,25 @@
 // SignalSeeker 共通型定義
 
-/** 訪問先の種別。リストを変えることで取得する情報を変える唯一のレバー。 */
+/**
+ * 訪問先の種別。省略時は収集側が自動判定する(GitHub→release, フィード発見→rss, それ以外→html)。
+ * 特定URLに特化させないため、通常は指定不要。
+ */
 export type SourceType = "rss" | "html" | "github_release";
 
 /** config/sources.json の1エントリ。別ツールで保守し、本アプリは読み取るのみ。 */
 export interface Source {
   id: string;
   name: string;
+  /** サイトURL。フィードURLでもサイトトップでも可(フィードは自動発見する)。 */
   url: string;
-  type: SourceType;
+  /** 省略可。指定が無ければ url から戦略を自動判定する。 */
+  type?: SourceType;
   category: string;
-  /** html型のみ: 一覧リンクを抽出する CSS セレクタ */
+  /** 任意: フィードURLを明示するとフィード自動発見をスキップ(高速化)。 */
+  feedUrl?: string;
+  /** 任意(html): 一覧リンク抽出の CSS セレクタ。無ければ汎用ヒューリスティックで抽出。 */
   selector?: string;
-  /** html型のみ: 1ソースから取得する最大リンク数 (既定 20) */
+  /** 任意: 1ソースから取得する最大件数 (既定 20)。 */
   maxLinks?: number;
   enabled: boolean;
 }
@@ -100,8 +107,10 @@ export type NotifyTarget = "console" | "discord";
 export interface CollectConfig {
   /** 1記事あたり保持・要約に渡す最大文字数 (既定 8000)。 */
   maxContentChars: number;
-  /** html型で各記事ページの本文も取得するか (既定 true)。 */
+  /** 各記事ページの本文も取得するか (html、および本文が薄いRSS記事の補完。既定 true)。 */
   fetchArticleBody: boolean;
+  /** RSS本文がこの文字数未満なら記事ページ本文で補完する (0=補完しない。既定 400)。 */
+  articleBodyMinChars: number;
 }
 
 /** Obsidian Wiki 出力設定 (lllmAgents の ObsidianConfig 流儀)。 */

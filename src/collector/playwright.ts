@@ -33,6 +33,7 @@ export class BrowserSession {
     const page = await browser.newPage();
     try {
       await page.goto(source.url, { waitUntil: "domcontentloaded", timeout: opts.navTimeoutMs });
+      // セレクタ指定があればそれを使う。無ければ全 <a> を汎用ヒューリスティックで選別する。
       const selector = source.selector ?? "a";
       const links = await page.$$eval(selector, (els) =>
         (els as HTMLAnchorElement[]).map((el) => ({
@@ -41,13 +42,30 @@ export class BrowserSession {
         })),
       );
 
+      // 同一サイト・十分な長さのリンク本文・一覧トップ自身は除外、で記事リンクらしきものに絞る。
+      const pageUrl = new URL(source.url);
+      const minTextLen = source.selector ? 8 : 18;
       const seen = new Set<string>();
       const picked: { text: string; href: string }[] = [];
       for (const link of links) {
-        if (!link.href || !link.text || link.text.length < 8) continue;
-        if (seen.has(link.href)) continue;
-        seen.add(link.href);
-        picked.push(link);
+        if (!link.href || !link.text || link.text.length < minTextLen) continue;
+        let href: URL;
+        try {
+          href = new URL(link.href);
+        } catch {
+          continue;
+        }
+        if (href.protocol !== "http:" && href.protocol !== "https:") continue;
+        // セレクタ未指定(汎用)時は同一ホストの、トップより深い階層のリンクのみ
+        if (!source.selector) {
+          if (href.host !== pageUrl.host) continue;
+          if (href.pathname.replace(/\/+$/, "") === pageUrl.pathname.replace(/\/+$/, "")) continue;
+          if (href.pathname === "/" || href.hash) continue;
+        }
+        const norm = href.href.split("#")[0]!;
+        if (seen.has(norm)) continue;
+        seen.add(norm);
+        picked.push({ text: link.text, href: norm });
         if (picked.length >= opts.limit) break;
       }
 
@@ -74,19 +92,35 @@ export class BrowserSession {
     }
   }
 
-  /** 記事ページを開き、本文らしき要素のテキストを取得する。失敗時は null。 */
+  /**
+   * 記事ページを開き本文らしきテキストを取得する(汎用・サイト別セレクタ不要)。
+   * RSS本文が薄い記事の補完にも使う。失敗時は null。
+   */
+  async fetchArticle(url: string, maxChars: number, timeoutMs: number): Promise<string | null> {
+    const browser = await this.ensure();
+    return this.fetchBody(browser, url, maxChars, timeoutMs);
+  }
+
+  /**
+   * 記事ページを開き、本文らしき要素のテキストを取得する。失敗時は null。
+   * JS描画のSPAでも本文を取れるよう、domcontentloaded 後に networkidle を待ってから抽出する
+   * (networkidle に到達しないページもあるため、待機失敗時はそのまま抽出にフォールバックせず現状を読む)。
+   */
   private async fetchBody(browser: Browser, url: string, maxChars: number, timeoutMs: number): Promise<string | null> {
     const page = await browser.newPage();
     try {
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: timeoutMs });
+      // 描画完了を待つ(到達しなくても例外を握って続行)
+      await page.waitForLoadState("networkidle", { timeout: timeoutMs }).catch(() => {});
+      // 注意: evaluate 内に名前付き関数を置くと tsx/esbuild の keepNames が __name を注入し
+      // ブラウザ側で ReferenceError になる。インラインのみで本文らしい要素→body の順に拾う。
       const text = await page.evaluate(() => {
-        const pick = (sel: string): string => {
-          const el = document.querySelector(sel) as HTMLElement | null;
-          return el?.innerText ?? "";
-        };
-        // 本文らしい要素を優先順に試し、無ければ body 全体
-        const candidate = pick("article") || pick("main") || pick('[role="main"]') || document.body.innerText;
-        return candidate.replace(/\s+/g, " ").trim();
+        const el =
+          document.querySelector("article") ||
+          document.querySelector("main") ||
+          document.querySelector('[role="main"]');
+        const raw = (el && (el as HTMLElement).innerText) || document.body.innerText || "";
+        return raw.replace(/\s+/g, " ").trim();
       });
       return text ? text.slice(0, maxChars) : null;
     } catch {
