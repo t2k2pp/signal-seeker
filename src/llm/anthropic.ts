@@ -60,7 +60,9 @@ export class AnthropicProvider implements LLMProvider {
         },
       };
     } catch (err) {
-      yield { type: "error", error: (err as Error).message };
+      const e = err as { message?: string; status?: number; error?: { error?: { message?: string } } };
+      const detail = e.error?.error?.message ? ` (${e.error.error.message})` : "";
+      yield { type: "error", error: `${e.message ?? String(err)}${e.status ? ` [HTTP ${e.status}]` : ""}${detail}` };
     }
   }
 }

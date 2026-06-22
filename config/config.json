@@ -17,6 +17,24 @@
     "maxContentChars": 800000,
     "fetchArticleBody": true
   },
+  "curation": {
+    "rankByScore": true,
+    "groupReleaseSeries": true,
+    "enrichAttention": true,
+    "sources": {
+      "hfPapers": true,
+      "semanticScholar": true,
+      "github": true
+    },
+    "fetchTimeoutMs": 15000,
+    "weights": {
+      "recency": 0.4,
+      "attention": 0.4,
+      "content": 0.2
+    },
+    "recencyHalfLifeDays": 7,
+    "demoteFactor": 0.3
+  },
   "wiki": {
     "enabled": true,
     "vaultPath": "data/wiki",
@@ -33,6 +51,11 @@
     "playwright": {
       "navTimeoutMs": 30000,
       "articleTimeoutMs": 25000
+    },
+    "summarize": {
+      "maxOutputTokens": 8000,
+      "maxRetries": 2,
+      "retryBackoffMs": 3000
     },
     "logging": {
       "dir": "data/logs",

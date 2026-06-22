@@ -5,7 +5,8 @@ import { mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { isAbsolute, join } from "node:path";
 import { PROJECT_ROOT } from "../config.js";
-import type { StoredItem, WikiConfig } from "../types.js";
+import type { CurationConfig, StoredItem, WikiConfig } from "../types.js";
+import { scoreItem, attentionBadge } from "../curation/score.js";
 
 /** Obsidian 非対応文字を除去し slug 化。 */
 function slugify(s: string): string {
@@ -39,9 +40,10 @@ interface NoteRef {
   category: string;
   url: string;
   publishedAt: string | null;
+  score: number;
 }
 
-function buildNote(item: StoredItem, defaultTags: string[], mocBasename: string): string {
+function buildNote(item: StoredItem, defaultTags: string[], mocBasename: string, score: number): string {
   const tags = [
     ...new Set([
       ...defaultTags,
@@ -49,6 +51,7 @@ function buildNote(item: StoredItem, defaultTags: string[], mocBasename: string)
       `source/${slugify(item.sourceName)}`,
     ]),
   ];
+  const a = item.attention;
   const fm = [
     "---",
     `title: "${esc(item.title)}"`,
@@ -61,13 +64,21 @@ function buildNote(item: StoredItem, defaultTags: string[], mocBasename: string)
     `published: ${item.publishedAt ?? ""}`,
     `collected: ${item.firstSeenAt}`,
     `updated: ${item.lastSeenAt}`,
+    `score: ${score.toFixed(3)}`,
+    ...(a?.hfUpvotes != null ? [`hf_upvotes: ${a.hfUpvotes}`] : []),
+    ...(a?.citationCount != null ? [`citations: ${a.citationCount}`] : []),
+    ...(a?.ghReactions != null ? [`gh_reactions: ${a.ghReactions}`] : []),
+    ...(a?.ghStars != null ? [`gh_stars: ${a.ghStars}`] : []),
+    ...(a?.prerelease ? ["prerelease: true"] : []),
     "---",
     "",
   ];
+  const attLine = attentionBadge(item.attention);
   const body = [
     `# ${item.title}`,
     "",
     `> 出典(エビデンス): [${item.sourceName}](${item.url})${item.publishedAt ? `  ·  ${item.publishedAt}` : ""}`,
+    ...(attLine ? ["", `> 現地での注目度: ${attLine}  ·  重要度 ★${score.toFixed(2)}`] : []),
     "",
     "## 要約(客観ファクト)",
     "",
@@ -88,7 +99,11 @@ function buildNote(item: StoredItem, defaultTags: string[], mocBasename: string)
  * DB の要約済み記事すべてから vault を再生成する(冪等)。
  * 管理対象は <vault>/Notes・<vault>/MOC・<vault>/index.md のみ。
  */
-export function buildWiki(items: StoredItem[], cfg: WikiConfig): { vault: string; noteCount: number } {
+export function buildWiki(
+  items: StoredItem[],
+  cfg: WikiConfig,
+  curation: CurationConfig,
+): { vault: string; noteCount: number } {
   const vault = resolveVault(cfg.vaultPath);
   const notesDir = join(vault, "Notes");
   const mocDir = join(vault, "MOC");
@@ -103,10 +118,12 @@ export function buildWiki(items: StoredItem[], cfg: WikiConfig): { vault: string
   // カテゴリ -> ソース -> NoteRef
   const byCategory = new Map<string, Map<string, NoteRef[]>>();
 
+  const now = Date.now();
   for (const item of items) {
     const mocBasename = `MOC ${item.category}`;
     const basename = `${slugify(item.title)}-${hash8(item.url)}`;
-    writeFileSync(join(notesDir, `${basename}.md`), buildNote(item, defaultTags, mocBasename), "utf-8");
+    const score = scoreItem(item, curation, now);
+    writeFileSync(join(notesDir, `${basename}.md`), buildNote(item, defaultTags, mocBasename, score), "utf-8");
 
     const cat = byCategory.get(item.category) ?? new Map<string, NoteRef[]>();
     const arr = cat.get(item.sourceName) ?? [];
@@ -117,6 +134,7 @@ export function buildWiki(items: StoredItem[], cfg: WikiConfig): { vault: string
       category: item.category,
       url: item.url,
       publishedAt: item.publishedAt,
+      score,
     });
     cat.set(item.sourceName, arr);
     byCategory.set(item.category, cat);
@@ -136,8 +154,10 @@ export function buildWiki(items: StoredItem[], cfg: WikiConfig): { vault: string
     ];
     for (const [sourceName, notes] of sources) {
       lines.push(`## ${sourceName}`, "");
-      for (const n of notes) {
-        lines.push(`- [[${n.basename}|${n.title}]]${n.publishedAt ? `  ·  ${n.publishedAt}` : ""}`);
+      for (const n of [...notes].sort((a, b) => b.score - a.score)) {
+        lines.push(
+          `- ★${n.score.toFixed(2)} [[${n.basename}|${n.title}]]${n.publishedAt ? `  ·  ${n.publishedAt}` : ""}`,
+        );
       }
       lines.push("");
     }

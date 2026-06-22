@@ -33,6 +33,25 @@ export interface Item {
 /** レポートでの記事の状態。new=今回新規 / updated=本文更新 / carried=過去のdry実行からの繰越。 */
 export type ItemState = "new" | "updated" | "carried";
 
+/**
+ * 「現地での注目度」シグナル。取得元ごとに得られるものだけ埋まる(無いものは undefined)。
+ * これらは重要度スコアの材料にし、レポートにも併記する。
+ */
+export interface AttentionMetrics {
+  /** Hugging Face Papers の upvote 数(arXiv論文がHF上にページを持つ場合)。 */
+  hfUpvotes?: number;
+  /** Semantic Scholar の引用数(主に既存論文向け。新着はほぼ0)。 */
+  citationCount?: number;
+  /** GitHub リポジトリの star 数(リポジトリ全体の人気)。 */
+  ghStars?: number;
+  /** GitHub リリースへの reaction 合計(そのリリース個別への反応)。 */
+  ghReactions?: number;
+  /** GitHub リリースが prerelease(RC等)か。重要度の減点に使う。 */
+  prerelease?: boolean;
+  /** 注目度取得を試みた時刻(ISO)。未取得(null)と「取得したが何も無い」を区別する。 */
+  fetchedAt?: string;
+}
+
 /** 要約付きの記事(レポート・Wikiで使う)。 */
 export interface SummarizedItem extends Item {
   sourceName: string;
@@ -40,6 +59,10 @@ export interface SummarizedItem extends Item {
   /** 生成AIによる客観ファクト要約 (Markdown 箇条書き)。未取得は null。 */
   summary: string | null;
   state: ItemState;
+  /** 「現地での注目度」シグナル(取得済みなら)。 */
+  attention?: AttentionMetrics | null;
+  /** レポート生成時に算出した重要度スコア(0..1目安、降順に並べる)。 */
+  score?: number;
 }
 
 /** DB に永続化された記事1行(Wiki/再利用の基盤)。 */
@@ -49,6 +72,8 @@ export interface StoredItem extends Item {
   summary: string | null;
   /** 本実行でレポート配信済みなら true。dry実行では false のまま繰り越す。 */
   reported: boolean;
+  /** 「現地での注目度」シグナル(取得済みなら)。 */
+  attention?: AttentionMetrics | null;
   firstSeenAt: string;
   lastSeenAt: string;
 }
@@ -88,6 +113,43 @@ export interface WikiConfig {
   defaultTags?: string[];
 }
 
+/**
+ * キュレーション(重要度ランキング・注目度・集約)の設定。
+ * 重みや係数は「閾値」ではなく挙動の調整なので runtime ではなくここに置く。
+ */
+export interface CurationConfig {
+  /** 重要度スコアでレポート/Wikiを並べ替えるか。 */
+  rankByScore: boolean;
+  /** 同一リリース系列(rc等)や近接重複を集約するか。 */
+  groupReleaseSeries: boolean;
+  /** 注目度シグナルの外部取得を有効化するか。 */
+  enrichAttention: boolean;
+  /** 個別シグナルの取得 ON/OFF。 */
+  sources: {
+    /** Hugging Face Papers upvote(arXiv論文、認証不要)。 */
+    hfPapers: boolean;
+    /** Semantic Scholar 引用数(S2_API_KEY 無しだと429になりやすい)。 */
+    semanticScholar: boolean;
+    /** GitHub star/reaction/prerelease(無認証可、GITHUB_TOKEN で上限緩和)。 */
+    github: boolean;
+  };
+  /** 注目度取得1回あたりのHTTPタイムアウト(ms)。 */
+  fetchTimeoutMs: number;
+  /** スコア重み(各シグナルを0..1に正規化した値へ掛ける)。 */
+  weights: {
+    /** 鮮度(新しさ)。 */
+    recency: number;
+    /** 注目度(upvote/引用/reaction等)。 */
+    attention: number;
+    /** 内容(破壊的変更ありで加点、ファクト無しで0)。 */
+    content: number;
+  };
+  /** 鮮度スコアの半減日数(この日数で鮮度が半分になる指数減衰)。 */
+  recencyHalfLifeDays: number;
+  /** prerelease や「ファクト無し」記事に掛ける減点係数(0..1、小さいほど降格)。 */
+  demoteFactor: number;
+}
+
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 /** タイムアウト等の閾値・ログ設定。ハードコードせず config に集約。 */
@@ -110,6 +172,14 @@ export interface RuntimeConfig {
     /** 記事ページ本文取得 goto のタイムアウト(ms)。 */
     articleTimeoutMs: number;
   };
+  summarize: {
+    /** 要約の最大出力トークン数。reasoning モデルは推論にも消費するため大きめ推奨。 */
+    maxOutputTokens: number;
+    /** 1記事の要約失敗時に再試行する最大回数 (0=リトライなし)。 */
+    maxRetries: number;
+    /** リトライ間隔の基準(ms)。指数バックオフ base*2^(attempt-1) で待機。 */
+    retryBackoffMs: number;
+  };
   logging: {
     /** ログ出力ディレクトリ(相対 or 絶対、既定 "data/logs")。 */
     dir: string;
@@ -130,6 +200,7 @@ export interface AppConfig {
   /** 初回実行時、source毎に取り込む最大件数 (差分ノイズ抑制)。 */
   firstRunLimit: number;
   collect: CollectConfig;
+  curation: CurationConfig;
   wiki: WikiConfig;
   runtime: RuntimeConfig;
 }

@@ -11,7 +11,7 @@ if (!config.wiki.enabled) {
 const store = new Store();
 try {
   const items = store.allSummarizedItems();
-  const { vault, noteCount } = buildWiki(items, config.wiki);
+  const { vault, noteCount } = buildWiki(items, config.wiki, config.curation);
   console.log(`Wiki を再生成しました: ${vault} (${noteCount}件)`);
 } finally {
   store.close();

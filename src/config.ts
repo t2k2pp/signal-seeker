@@ -37,6 +37,26 @@ export function loadConfig(): AppConfig {
     fetchArticleBody: cfg.collect?.fetchArticleBody ?? true,
   };
 
+  const cu = cfg.curation ?? ({} as AppConfig["curation"]);
+  cfg.curation = {
+    rankByScore: cu.rankByScore ?? true,
+    groupReleaseSeries: cu.groupReleaseSeries ?? true,
+    enrichAttention: cu.enrichAttention ?? true,
+    sources: {
+      hfPapers: cu.sources?.hfPapers ?? true,
+      semanticScholar: cu.sources?.semanticScholar ?? true,
+      github: cu.sources?.github ?? true,
+    },
+    fetchTimeoutMs: cu.fetchTimeoutMs ?? 15000,
+    weights: {
+      recency: cu.weights?.recency ?? 0.4,
+      attention: cu.weights?.attention ?? 0.4,
+      content: cu.weights?.content ?? 0.2,
+    },
+    recencyHalfLifeDays: cu.recencyHalfLifeDays ?? 7,
+    demoteFactor: cu.demoteFactor ?? 0.3,
+  };
+
   cfg.wiki = {
     enabled: cfg.wiki?.enabled ?? true,
     vaultPath: cfg.wiki?.vaultPath ?? "data/wiki",
@@ -55,6 +75,11 @@ export function loadConfig(): AppConfig {
     playwright: {
       navTimeoutMs: r.playwright?.navTimeoutMs ?? 30000,
       articleTimeoutMs: r.playwright?.articleTimeoutMs ?? 25000,
+    },
+    summarize: {
+      maxOutputTokens: r.summarize?.maxOutputTokens ?? 8000,
+      maxRetries: r.summarize?.maxRetries ?? 2,
+      retryBackoffMs: r.summarize?.retryBackoffMs ?? 3000,
     },
     logging: {
       dir: r.logging?.dir ?? "data/logs",

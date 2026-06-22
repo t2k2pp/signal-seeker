@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { PROJECT_ROOT } from "./config.js";
-import type { Item, ItemState, StoredItem } from "./types.js";
+import type { AttentionMetrics, Item, ItemState, StoredItem } from "./types.js";
 
 const DATA_DIR = join(PROJECT_ROOT, "data");
 
@@ -27,8 +27,18 @@ interface ItemRow {
   source_name: string;
   summary: string | null;
   reported: number;
+  attention: string | null;
   first_seen_at: string;
   last_seen_at: string;
+}
+
+function parseAttention(json: string | null): AttentionMetrics | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as AttentionMetrics;
+  } catch {
+    return null;
+  }
 }
 
 function rowToStored(r: ItemRow): StoredItem {
@@ -44,6 +54,7 @@ function rowToStored(r: ItemRow): StoredItem {
     sourceName: r.source_name,
     summary: r.summary,
     reported: r.reported === 1,
+    attention: parseAttention(r.attention),
     firstSeenAt: r.first_seen_at,
     lastSeenAt: r.last_seen_at,
   };
@@ -73,6 +84,7 @@ export class Store {
         source_name   TEXT NOT NULL DEFAULT '',
         summary       TEXT,
         reported      INTEGER NOT NULL DEFAULT 0,
+        attention     TEXT,
         first_seen_at TEXT NOT NULL,
         last_seen_at  TEXT NOT NULL,
         PRIMARY KEY (source_id, item_key)
@@ -99,6 +111,7 @@ export class Store {
     addIfMissing("source_name", "source_name TEXT NOT NULL DEFAULT ''");
     addIfMissing("summary", "summary TEXT");
     addIfMissing("reported", "reported INTEGER NOT NULL DEFAULT 0");
+    addIfMissing("attention", "attention TEXT");
 
     const runCols = new Set(
       (this.db.prepare("PRAGMA table_info(runs)").all() as { name: string }[]).map((c) => c.name),
@@ -160,6 +173,13 @@ export class Store {
     this.db
       .prepare("UPDATE items SET summary = ? WHERE source_id = ? AND item_key = ?")
       .run(summary, sourceId, itemKey);
+  }
+
+  /** 「現地での注目度」シグナルを保存する(JSON)。 */
+  setAttention(sourceId: string, itemKey: string, attention: AttentionMetrics): void {
+    this.db
+      .prepare("UPDATE items SET attention = ? WHERE source_id = ? AND item_key = ?")
+      .run(JSON.stringify(attention), sourceId, itemKey);
   }
 
   /** 未配信(reported=0)の記事すべて = 次のレポートに載せる対象(過去dry分も含む)。 */
