@@ -1,5 +1,5 @@
 import { loadConfig, loadSources } from "./config.js";
-import { Store, kindToState, type UpsertKind } from "./db.js";
+import { SqliteStore, kindToState, type UpsertKind } from "./db.js";
 import { collectAll } from "./collector/index.js";
 import { enrichAttention } from "./collector/attention.js";
 import { summarizeItems } from "./summarizer/index.js";
@@ -30,7 +30,7 @@ async function main(): Promise<void> {
   );
   console.log(`  ログ: ${logger.path}`);
 
-  const store = new Store();
+  const store = new SqliteStore();
 
   // 前回の中断を検出して通知
   const interrupted = store.findInterruptedRuns();
@@ -64,7 +64,7 @@ async function main(): Promise<void> {
       const sourceMap = new Map(sources.map((s) => [s.id, s]));
       for (const item of items) {
         const src = sourceMap.get(item.sourceId);
-        const kind = store.upsert(item, src?.category ?? "未分類", src?.name ?? item.sourceId);
+        const kind = store.upsert(item, src?.category ?? "未分類", src?.name ?? item.sourceId, runId);
         stateByKey.set(keyOf(item.sourceId, item.itemKey), kind);
       }
       const nNew = [...stateByKey.values()].filter((k) => k === "new").length;

@@ -4,7 +4,7 @@
 //   runs [--limit N]                   実行履歴(status/時間/件数/ログ)
 //   search <text> [--limit N]          全文(LIKE)検索
 //   item <sourceId> <itemKey>          1件の詳細(要約・本文込み)
-import { Store } from "../db.js";
+import { SqliteStore } from "../db.js";
 
 function arg(flag: string): string | undefined {
   const i = process.argv.indexOf(flag);
@@ -23,7 +23,7 @@ function trunc(s: string, n: number): string {
 }
 
 const cmd = process.argv[2] && !process.argv[2].startsWith("-") ? process.argv[2] : "stats";
-const store = new Store();
+const store = new SqliteStore();
 
 try {
   switch (cmd) {

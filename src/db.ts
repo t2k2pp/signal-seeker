@@ -60,7 +60,68 @@ function rowToStored(r: ItemRow): StoredItem {
   };
 }
 
-export class Store {
+// ---- 永続化の契約(差し替え先の明文化) ----
+// 生SQLは本ファイルのみに閉じる。別DBへ移す場合は Store を実装した新クラスを作り、
+// 呼び出し側(index/wiki/db-view)はそのインスタンスを使うだけにする。
+// 注意: 現実装(better-sqlite3)は同期。非同期ドライバへ移す場合は本 interface を
+// Promise 返しに変更し呼び出し側へ await を波及させる必要がある(設計書参照)。
+
+export interface Stats {
+  total: number;
+  summarized: number;
+  pending: number;
+  needingSummary: number;
+  byCategory: { category: string; count: number }[];
+  bySource: { sourceName: string; count: number }[];
+}
+
+export interface RunRow {
+  id: number;
+  started_at: string;
+  finished_at: string | null;
+  dry_run: number;
+  status: string;
+  new_count: number;
+  log_label: string | null;
+  error: string | null;
+}
+
+export interface ItemFilter {
+  sourceId?: string;
+  pending?: boolean;
+  needing?: boolean;
+  reported?: boolean;
+  limit?: number;
+}
+
+export interface InterruptedRun {
+  id: number;
+  started_at: string;
+  log_label: string | null;
+}
+
+/** 永続化バックエンドの契約。SqliteStore が実装。別DBはこれを実装すれば差し替わる。 */
+export interface Store {
+  upsert(item: Item, category: string, sourceName: string, runId: number): UpsertKind;
+  itemsNeedingSummary(): StoredItem[];
+  setSummary(sourceId: string, itemKey: string, summary: string): void;
+  setAttention(sourceId: string, itemKey: string, attention: AttentionMetrics): void;
+  pendingItems(): StoredItem[];
+  markReported(keys: { sourceId: string; itemKey: string }[]): void;
+  allSummarizedItems(): StoredItem[];
+  stats(): Stats;
+  listItems(filter: ItemFilter): StoredItem[];
+  searchItems(text: string, limit?: number): StoredItem[];
+  getItem(sourceId: string, itemKey: string): StoredItem | null;
+  recentRuns(limit?: number): RunRow[];
+  startRun(dryRun: boolean, logLabel: string): number;
+  finishRun(runId: number, status: "completed" | "failed", newCount: number, error?: string): void;
+  findInterruptedRuns(): InterruptedRun[];
+  markStaleRunsInterrupted(exceptRunId: number): number;
+  close(): void;
+}
+
+export class SqliteStore implements Store {
   private db: Database.Database;
 
   constructor(dbPath = join(DATA_DIR, "signalseeker.db")) {
@@ -85,6 +146,7 @@ export class Store {
         summary       TEXT,
         reported      INTEGER NOT NULL DEFAULT 0,
         attention     TEXT,
+        first_seen_run INTEGER,
         first_seen_at TEXT NOT NULL,
         last_seen_at  TEXT NOT NULL,
         PRIMARY KEY (source_id, item_key)
@@ -112,6 +174,7 @@ export class Store {
     addIfMissing("summary", "summary TEXT");
     addIfMissing("reported", "reported INTEGER NOT NULL DEFAULT 0");
     addIfMissing("attention", "attention TEXT");
+    addIfMissing("first_seen_run", "first_seen_run INTEGER");
 
     const runCols = new Set(
       (this.db.prepare("PRAGMA table_info(runs)").all() as { name: string }[]).map((c) => c.name),
@@ -126,8 +189,9 @@ export class Store {
    * - 本文変化: 更新し reported=0, summary=null にリセット (再要約対象)
    * - 変化なし: last_seen_at のみ更新 (reported/summary は維持)
    * reported を消費しないため、dry実行で入れた記事も本実行で取り込まれる。
+   * runId は初収集した実行のID(first_seen_run)。実行↔記事の追跡に使う(更新時は変更しない)。
    */
-  upsert(item: Item, category: string, sourceName: string): UpsertKind {
+  upsert(item: Item, category: string, sourceName: string, runId: number): UpsertKind {
     const now = new Date().toISOString();
     const existing = this.db
       .prepare("SELECT content_hash FROM items WHERE source_id = ? AND item_key = ?")
@@ -136,10 +200,10 @@ export class Store {
     if (!existing) {
       this.db
         .prepare(
-          `INSERT INTO items (source_id, item_key, title, url, published_at, content_hash, raw_text, category, source_name, summary, reported, first_seen_at, last_seen_at)
-           VALUES (@sourceId, @itemKey, @title, @url, @publishedAt, @contentHash, @rawText, @category, @sourceName, NULL, 0, @now, @now)`,
+          `INSERT INTO items (source_id, item_key, title, url, published_at, content_hash, raw_text, category, source_name, summary, reported, first_seen_run, first_seen_at, last_seen_at)
+           VALUES (@sourceId, @itemKey, @title, @url, @publishedAt, @contentHash, @rawText, @category, @sourceName, NULL, 0, @runId, @now, @now)`,
         )
-        .run({ ...item, category, sourceName, now });
+        .run({ ...item, category, sourceName, runId, now });
       return "new";
     }
     if (existing.content_hash !== item.contentHash) {

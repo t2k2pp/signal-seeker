@@ -117,11 +117,6 @@ export function buildMarkdown(result: RunResult, curation: CurationConfig): stri
     }
   }
 
-  if (result.errors.length > 0) {
-    lines.push("---", "", "## 収集エラー", "");
-    for (const e of result.errors) lines.push(`- \`${e.sourceId}\`: ${e.message}`);
-    lines.push("");
-  }
-
+  // 収集エラーはレポートに載せない(運用ログの領分)。errors は logger/JSONL とDBの runs.error に残る。
   return lines.join("\n");
 }
