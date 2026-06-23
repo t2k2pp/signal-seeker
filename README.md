@@ -20,8 +20,9 @@ Collect (Playwright + RSS) → Summarize (Claude/ローカルLLM) → Report/Not
 | ① 取得 | `src/collector/` | **不使用** | rss-parser でフィード取得 / Playwright で DOM・本文抽出 |
 | 差分判定 | `src/db.ts` | **不使用** | `content_hash` の比較で新規・更新を検知(SHA-256) |
 | ② 概要化 | `src/summarizer/` + `src/llm/` | **使用** | Claude / ローカルLLM で4観点の客観ファクト抽出 |
-| ③ 送付 | `src/report/` + `src/notify/` | **不使用** | Markdown 整形 + Discord Webhook / コンソール |
+| ③ 送付 | `src/report/` + `src/notify/` | **不使用** | Markdown 整形 + Discord Webhook(全文を添付ファイルで送付)/ コンソール |
 | Wiki生成 | `src/wiki/` | **不使用** | DB の要約から Obsidian vault を機械的に生成(検索/カテゴリ/リンク) |
+| 整形(任意) | `src/report/html.ts` + `cli.ts` | **不使用** | レポートを HTML インフォグラフィックに整形(`npm run infographic`) |
 
 ### データの蓄積と再利用
 
@@ -47,6 +48,7 @@ npm run crawl        # 収集 → 要約 → レポート/通知 → Wiki生成(
 npm run crawl:dry    # 同上だが通知せず・配信済みにしない(次の本実行に繰り越し)
 npm run crawl:resume # 収集をスキップしDBの未処理分から再開(中断復旧用)
 npm run wiki         # DBの蓄積から Obsidian vault だけを再生成(収集・要約なし)
+npm run infographic  # 直近レポートを HTML インフォグラフィックに整形(見栄え重視、下記)
 npm run db -- stats  # DB閲覧(開発者向け、下記)
 npm run config       # 設定メンテナンス(対話メニュー、下記)
 npm run typecheck    # 型チェック
@@ -169,6 +171,27 @@ data/wiki/
 
 > 現状(MVP)はカテゴリ分け・グループ化を**メタデータで機械的に**行います。AIによるテーマ抽出/概観の自動生成は
 > 将来の拡張ポイントです(`src/wiki/` を差し替え)。
+
+## HTML インフォグラフィック
+
+レポートと同じ内容を、**見やすいダーク・ダッシュボード**の HTML に整形する独立コマンドです。収集・要約・送付
+とは切り離されており、「見栄え・読みやすさを上げたいときだけ」実行できます。`npm run crawl` のたびにレポートの
+素データ(スナップショット)が `data/reports/report-<実行ラベル>.json` に保存されるので、それを元に何度でも
+再描画できます(収集・要約のやり直しは不要)。
+
+```bash
+npm run infographic                 # 直近のレポートを HTML 化(既定)
+npm run infographic -- --latest     # 同上(明示)
+npm run infographic -- --run=128    # 実行ID(run-id)を指定して過去回を再描画
+npm run infographic -- --label=<実行ラベル>  # 実行ラベルを指定
+```
+
+- 出力: `data/reports/report-<実行ラベル>.html`。ブラウザで開くだけで表示できます(外部ファイル不要の自己完結HTML)。
+- run-id は、レポート見出し(`# SignalSeeker レポート … (run #128)`)、`npm run db -- runs`、`npm run crawl`
+  の実行ログで確認できます。
+- 引数は **`--run=128` のように `=` でつなぐ**形式を使ってください(`npm run … -- --run 128` の空白区切りは
+  npm に取り込まれて渡らないため)。
+- 見た目のテーマは固定で、毎回同じデザインになります。
 
 ## 運用・開発者向けツール
 

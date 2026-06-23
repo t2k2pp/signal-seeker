@@ -115,7 +115,7 @@ async function main(): Promise<void> {
         state,
       };
     });
-    const result: RunResult = { startedAt, finishedAt: new Date().toISOString(), summarized, errors };
+    const result: RunResult = { runId, startedAt, finishedAt: new Date().toISOString(), summarized, errors };
     await dispatchNotify(result, config, dryRun, logger);
 
     // 4. Wiki — DB の要約済み全件から Obsidian vault を再生成(非AI・冪等)

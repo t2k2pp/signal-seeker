@@ -218,6 +218,8 @@ export interface AppConfig {
 
 /** 1回の実行結果サマリ。 */
 export interface RunResult {
+  /** 実行ID(runs.id)。レポート見出し・スナップショット・再描画の手がかり。 */
+  runId: number | null;
   startedAt: string;
   finishedAt: string;
   summarized: SummarizedItem[];

@@ -1,9 +1,6 @@
 import type { CurationConfig, RunResult, SummarizedItem } from "../types.js";
-import { applyScores, groupBySeries, attentionBadge, type SeriesGroup } from "../curation/score.js";
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+import { attentionBadge, type SeriesGroup } from "../curation/score.js";
+import { anchor, buildReportModel, type ReportModel } from "./model.js";
 
 function stateBadge(item: SummarizedItem): string {
   return item.state === "new" ? "🆕" : item.state === "updated" ? "♻️更新" : "📥繰越";
@@ -35,84 +32,36 @@ function renderOthers(others: SummarizedItem[], lines: string[]): void {
   lines.push("", "</details>", "");
 }
 
-const groupTop = (g: SeriesGroup[]) => g[0]?.primary.score ?? 0;
+/** 構造化モデルから Markdown を描画する。 */
+export function renderMarkdown(model: ReportModel): string {
+  const runTag = model.runId != null ? ` (run #${model.runId})` : "";
+  const lines: string[] = [`# SignalSeeker レポート ${model.date}${runTag}`, ""];
 
-/** GitHub互換の見出しアンカーを作る(目次リンク用)。記号除去・小文字・空白を-に。 */
-function anchor(heading: string): string {
-  return heading
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s-]/gu, "")
-    .trim()
-    .replace(/\s+/g, "-");
-}
-
-/** グループ配列の総記事数(代表+同系列の関連)。 */
-const blockCount = (groups: SeriesGroup[]) => groups.reduce((a, g) => a + 1 + g.others.length, 0);
-
-/**
- * カテゴリ→ソース→記事 の階層でMarkdownレポートを生成する。
- * curation 設定に従い、重要度スコアで並べ替え、同一リリース系列を集約し、注目度を併記する。
- */
-export function buildMarkdown(result: RunResult, curation: CurationConfig): string {
-  const date = today();
-  const lines: string[] = [`# SignalSeeker レポート ${date}`, ""];
-
-  if (result.summarized.length === 0) {
+  if (model.total === 0) {
     lines.push("今回の新規・更新はありませんでした。", "");
-  } else {
-    applyScores(result.summarized, curation);
-    lines.push(`新規・更新: **${result.summarized.length}件**`, "");
-    if (curation.rankByScore) lines.push("_重要度スコア(★)降順・「現地での注目度」併記_", "");
+    return lines.join("\n");
+  }
 
-    // カテゴリ → ソース でグルーピング
-    const byCategory = new Map<string, Map<string, SummarizedItem[]>>();
-    for (const item of result.summarized) {
-      const cat = byCategory.get(item.category) ?? new Map<string, SummarizedItem[]>();
-      const arr = cat.get(item.sourceName) ?? [];
-      arr.push(item);
-      cat.set(item.sourceName, arr);
-      byCategory.set(item.category, cat);
-    }
+  lines.push(`新規・更新: **${model.total}件**`, "");
+  if (model.rankByScore) lines.push("_重要度スコア(★)降順・「現地での注目度」併記_", "");
 
-    // ソースごとに系列集約 → グループ配列に。並べ替えは rankByScore に従う。
-    type SourceBlock = { sourceName: string; groups: SeriesGroup[] };
-    type CatBlock = { category: string; sources: SourceBlock[] };
-    const catBlocks: CatBlock[] = [];
-    for (const [category, sources] of byCategory) {
-      const srcBlocks: SourceBlock[] = [];
-      for (const [sourceName, items] of sources) {
-        srcBlocks.push({ sourceName, groups: groupBySeries(items, curation.groupReleaseSeries) });
-      }
-      if (curation.rankByScore) srcBlocks.sort((a, b) => groupTop(b.groups) - groupTop(a.groups));
-      catBlocks.push({ category, sources: srcBlocks });
+  // 目次(カテゴリ→ソース、記事数付き。表示順は本文と一致)
+  lines.push("## 目次", "");
+  for (const cb of model.catBlocks) {
+    lines.push(`- [${cb.category}](#${anchor(cb.category)}) (${cb.count}件)`);
+    for (const sb of cb.sources) {
+      lines.push(`  - [${sb.sourceName}](#${anchor(sb.sourceName)}) (${sb.count}件)`);
     }
-    if (curation.rankByScore) {
-      catBlocks.sort(
-        (a, b) =>
-          Math.max(...b.sources.map((s) => groupTop(s.groups)), 0) -
-          Math.max(...a.sources.map((s) => groupTop(s.groups)), 0),
-      );
-    }
+  }
+  lines.push("", "---", "");
 
-    // 目次(カテゴリ→ソース、記事数付き。表示順は本文と一致)
-    lines.push("## 目次", "");
-    for (const cb of catBlocks) {
-      const catCount = cb.sources.reduce((a, s) => a + blockCount(s.groups), 0);
-      lines.push(`- [${cb.category}](#${anchor(cb.category)}) (${catCount}件)`);
-      for (const sb of cb.sources) {
-        lines.push(`  - [${sb.sourceName}](#${anchor(sb.sourceName)}) (${blockCount(sb.groups)}件)`);
-      }
-    }
-    lines.push("", "---", "");
-
-    for (const cb of catBlocks) {
-      lines.push(`## ${cb.category}`, "");
-      for (const sb of cb.sources) {
-        lines.push(`### ${sb.sourceName}`, "");
-        for (const g of sb.groups) {
-          renderPrimary(g.primary, lines);
-          renderOthers(g.others, lines);
-        }
+  for (const cb of model.catBlocks) {
+    lines.push(`## ${cb.category}`, "");
+    for (const sb of cb.sources) {
+      lines.push(`### ${sb.sourceName}`, "");
+      for (const g of sb.groups) {
+        renderPrimary(g.primary, lines);
+        renderOthers(g.others, lines);
       }
     }
   }
@@ -120,3 +69,13 @@ export function buildMarkdown(result: RunResult, curation: CurationConfig): stri
   // 収集エラーはレポートに載せない(運用ログの領分)。errors は logger/JSONL とDBの runs.error に残る。
   return lines.join("\n");
 }
+
+/**
+ * RunResult から Markdown レポートを生成する(従来の入口)。
+ * 構造化は buildReportModel に委譲し、ここは描画のみ。HTML版と内容が一致する。
+ */
+export function buildMarkdown(result: RunResult, curation: CurationConfig, runId: number | null = null): string {
+  return renderMarkdown(buildReportModel(result, curation, runId));
+}
+
+export type { SeriesGroup };
