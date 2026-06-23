@@ -45,6 +45,15 @@ export function renderMarkdown(model: ReportModel): string {
   lines.push(`新規・更新: **${model.total}件**`, "");
   if (model.rankByScore) lines.push("_重要度スコア(★)降順・「現地での注目度」併記_", "");
 
+  // カテゴリ別件数の俯瞰(Mermaid 円グラフ。GitHub/Obsidian/VSCode 等でレンダリングされる)
+  if (model.catBlocks.length > 0) {
+    lines.push("```mermaid", "pie showData title カテゴリ別 件数");
+    for (const cb of model.catBlocks) {
+      lines.push(`    "${cb.category.replace(/"/g, "'")}" : ${cb.count}`);
+    }
+    lines.push("```", "");
+  }
+
   // 目次(カテゴリ→ソース、記事数付き。表示順は本文と一致)
   lines.push("## 目次", "");
   for (const cb of model.catBlocks) {

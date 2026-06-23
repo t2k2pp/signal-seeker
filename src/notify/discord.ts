@@ -8,6 +8,16 @@ export interface DiscordOptions {
   retryUnitMs: number;
 }
 
+/** Discord に添付する1ファイル(レポート全文 md / インフォグラフィック html 等)。 */
+export interface DiscordAttachment {
+  /** 添付ファイル名(例 report-<runLabel>.md)。 */
+  name: string;
+  /** ファイル本体(テキスト)。 */
+  data: string;
+  /** MIMEタイプ(例 text/markdown, text/html)。 */
+  mimeType: string;
+}
+
 export function discordOptions(runtime: RuntimeConfig): DiscordOptions {
   return { timeoutMs: runtime.http.discordTimeoutMs, retryUnitMs: runtime.http.discordRetryUnitMs };
 }
@@ -18,13 +28,12 @@ function truncate(s: string, n: number): string {
 
 /**
  * Discord Webhook へ送付する。
- * 本文(content)は短い件数サマリのみ。レポート全文は Markdown ファイルとして添付するため、
+ * 本文(content)は短い案内のみ。レポート全文は添付ファイルとして送るため、
  * 文字数制限で本文が欠けることがない。content と添付を1リクエスト(multipart)で送る。
  */
 export async function notifyDiscord(
-  markdown: string,
-  fileName: string,
-  content: string,
+  message: string,
+  file: DiscordAttachment,
   opts: DiscordOptions,
 ): Promise<void> {
   const url = process.env.DISCORD_WEBHOOK_URL;
@@ -33,23 +42,23 @@ export async function notifyDiscord(
     return;
   }
 
-  const bytes = Buffer.byteLength(markdown, "utf-8");
+  const bytes = Buffer.byteLength(file.data, "utf-8");
   if (bytes > ATTACH_LIMIT) {
     // 握りつぶさず明示。現実的には起きないが、起きたら添付が拒否されることを警告する。
     console.warn(
-      `[discord] レポートが添付上限(${ATTACH_LIMIT}バイト)を超えています(${bytes}バイト)。Discord に拒否される可能性があります。`,
+      `[discord] 添付が上限(${ATTACH_LIMIT}バイト)を超えています(${bytes}バイト)。Discord に拒否される可能性があります。`,
     );
   }
 
   const makeForm = (): FormData => {
     const form = new FormData();
-    form.append("payload_json", JSON.stringify({ content: truncate(content, CONTENT_LIMIT) }));
-    form.append("files[0]", new Blob([markdown], { type: "text/markdown" }), fileName);
+    form.append("payload_json", JSON.stringify({ content: truncate(message, CONTENT_LIMIT) }));
+    form.append("files[0]", new Blob([file.data], { type: file.mimeType }), file.name);
     return form;
   };
 
   await post(url, makeForm, opts);
-  console.log(`[discord] 件数サマリと ${fileName} を送信しました。`);
+  console.log(`[discord] 本文と ${file.name} を送信しました。`);
 }
 
 async function post(url: string, makeForm: () => FormData, opts: DiscordOptions): Promise<void> {

@@ -48,7 +48,11 @@ export async function dispatchNotify(
   if (config.notify.targets.includes("discord")) {
     try {
       const fileName = `report-${logger.runLabel}.md`;
-      await notifyDiscord(markdown, fileName, summaryLine(result), discordOptions(config.runtime));
+      await notifyDiscord(
+        summaryLine(result),
+        { name: fileName, data: markdown, mimeType: "text/markdown" },
+        discordOptions(config.runtime),
+      );
       logger.info("discord_sent", { items: result.summarized.length });
     } catch (err) {
       logger.error("discord_failed", { message: (err as Error).message });

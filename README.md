@@ -184,9 +184,13 @@ npm run infographic                 # 直近のレポートを HTML 化(既定)
 npm run infographic -- --latest     # 同上(明示)
 npm run infographic -- --run=128    # 実行ID(run-id)を指定して過去回を再描画
 npm run infographic -- --label=<実行ラベル>  # 実行ラベルを指定
+npm run infographic -- --no-discord # Discord へは送らずファイル生成だけ
 ```
 
 - 出力: `data/reports/report-<実行ラベル>.html`。ブラウザで開くだけで表示できます(外部ファイル不要の自己完結HTML)。
+- **Discord にも送付**します: `config/config.json` の `notify.targets` に `discord` があり、`.env` に
+  `DISCORD_WEBHOOK_URL` を設定していれば、生成した HTML を添付ファイルとして送ります(本文は run-id と件数の短文)。
+  送りたくないときは `--no-discord` を付けてください。
 - run-id は、レポート見出し(`# SignalSeeker レポート … (run #128)`)、`npm run db -- runs`、`npm run crawl`
   の実行ログで確認できます。
 - 引数は **`--run=128` のように `=` でつなぐ**形式を使ってください(`npm run … -- --run 128` の空白区切りは
