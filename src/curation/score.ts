@@ -21,7 +21,7 @@ function attentionScore(a: AttentionMetrics | null | undefined): number {
   return Math.min(1, itemLevel * 0.8 + repoLevel * 0.2);
 }
 
-const NO_FACTS = /ファクト(は)?(一切)?(無|な)し|抽出すべき技術的ファクトなし/;
+const NO_FACTS = /ファクト(は)?(一切)?(無|な)し|抽出すべき(技術的)?ファクトなし/;
 
 /** 内容スコア: ファクト無し=0 / 破壊的変更あり=1 / それ以外で要約あり=0.5。 */
 function contentScore(summary: string | null): number {

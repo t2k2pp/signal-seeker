@@ -1,20 +1,18 @@
 // インフォグラフィック生成コマンド: 収集・要約をせず、保存済みスナップショットから
 // レポートと同一内容の HTML(ダーク・ダッシュボード)を描画する。
-//   npm run infographic -- [--run=<id> | --label=<label> | --latest] [--no-discord]
-// 既定は --latest。生成した HTML は Discord にも添付送付する(config.notify.targets に
-// discord があり、DISCORD_WEBHOOK_URL が設定されている場合。--no-discord で抑止)。
-// run-id は `npm run db -- runs` やレポート見出しで確認できる。
+//   npm run infographic -- --channel=<id> [--run=<id> | --label=<label> | --latest] [--no-discord]
+// 既定は --latest。生成した HTML はチャンネルの Discord 投稿先にも添付送付する
+// (config.notify.targets に discord があり webhook が設定されている場合。--no-discord で抑止)。
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { loadConfig, PROJECT_ROOT } from "../config.js";
+import { channelArg, resolveChannel, selectChannelIds } from "../channel.js";
 import type { RunResult } from "../types.js";
 import { buildReportModel } from "./model.js";
 import { renderHtml } from "./html.js";
 import { resolveSnapshot, type ReportSnapshot, type SnapshotSelector } from "./snapshot.js";
 import { notifyDiscord, discordOptions } from "../notify/discord.js";
 
-// `--flag value` と `--flag=value` の両形に対応する。
-// (npm 経由では `--flag value` が npm に横取りされるため `--flag=value` を推奨。)
+// `--flag value` と `--flag=value` の両形に対応する(npm 経由では `=` 形式を推奨)。
 function arg(flag: string): string | undefined {
   const eq = process.argv.find((a) => a.startsWith(`${flag}=`));
   if (eq) return eq.slice(flag.length + 1);
@@ -40,24 +38,31 @@ function parseSelector(): SnapshotSelector {
   return { latest: true };
 }
 
-/** Discord 本文用の短い案内(run-id と件数 / 週次は期間と件数)。 */
-function summaryLine(snap: ReportSnapshot): string {
+/** Discord 本文用の短い案内(チャンネル名 + run-id/期間 + 件数)。 */
+function summaryLine(snap: ReportSnapshot, channelName: string): string {
   const total = snap.summarized.length;
   if (snap.kind === "weekly" && snap.period) {
-    return `🗓 **SignalSeeker** 週次 ${snap.period.start}〜${snap.period.end}（${snap.period.days}日間）— HTMLインフォグラフィック ${total}件`;
+    return `🗓 **SignalSeeker [${channelName}]** 週次 ${snap.period.start}〜${snap.period.end}（${snap.period.days}日間）— HTMLインフォグラフィック ${total}件`;
   }
   const runTag = snap.runId != null ? `run #${snap.runId}` : "run —";
   const c = snap.counts;
-  return `🎨 **SignalSeeker** ${runTag} — HTMLインフォグラフィック（新規 ${c.new} / 更新 ${c.updated} / 繰越 ${c.carried}）`;
+  return `🎨 **SignalSeeker [${channelName}]** ${runTag} — HTMLインフォグラフィック（新規 ${c.new} / 更新 ${c.updated} / 繰越 ${c.carried}）`;
 }
 
 async function main(): Promise<void> {
-  const config = loadConfig();
+  // インフォグラフィックは1チャンネルを対象に描画する(all は対象外)。
+  const ids = selectChannelIds(channelArg());
+  if (ids.length !== 1) {
+    console.error(`インフォグラフィックは1チャンネルを指定してください(--channel=<id>)。対象: ${ids.join(", ")}`);
+    process.exit(1);
+  }
+  const channel = resolveChannel(ids[0]!);
+  const config = channel.config;
   const sel = parseSelector();
 
   let snap: ReportSnapshot;
   try {
-    snap = resolveSnapshot(sel);
+    snap = resolveSnapshot(channel.paths.reportsDir, sel);
   } catch (err) {
     console.error((err as Error).message);
     process.exit(1);
@@ -76,18 +81,19 @@ async function main(): Promise<void> {
     date: snap.date, // 過去回の再描画では当時の日付/期間末を使う
     kind: snap.kind ?? "daily",
     period: snap.period ?? null,
+    channelName: channel.name,
   });
 
   const html = renderHtml(model);
   const fileName = `report-${snap.runLabel}.html`;
-  const path = join(PROJECT_ROOT, "data", "reports", fileName);
+  const path = join(channel.paths.reportsDir, fileName);
   writeFileSync(path, html, "utf-8");
 
   const runTag = snap.runId != null ? `run #${snap.runId}` : "run —";
   console.log(`インフォグラフィックを生成しました: ${path}`);
-  console.log(`  対象: ${runTag} (${snap.date}) ・ ${model.total}件`);
+  console.log(`  チャンネル: [${channel.name}] / 対象: ${runTag} (${snap.date}) ・ ${model.total}件`);
 
-  // 手動実行でも Discord へ送付する(HTMLを添付)。
+  // 手動実行でもチャンネルの Discord へ送付する(HTMLを添付)。
   if (has("--no-discord")) {
     console.log("  --no-discord 指定のため Discord 送付はスキップしました。");
     return;
@@ -98,9 +104,10 @@ async function main(): Promise<void> {
   }
   try {
     await notifyDiscord(
-      summaryLine(snap),
+      summaryLine(snap, channel.name),
       { name: fileName, data: html, mimeType: "text/html" },
       discordOptions(config.runtime),
+      channel.discordWebhook,
     );
   } catch (err) {
     console.error(`  Discord 送付に失敗しました: ${(err as Error).message}`);

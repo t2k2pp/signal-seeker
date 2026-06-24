@@ -1,4 +1,5 @@
 {
+  "name": "AI・技術",
   "llm": {
     "endpoint": {
       "providerType": "llamacpp",
@@ -11,7 +12,12 @@
       "apiKey": "env:ANTHROPIC_API_KEY"
     }
   },
-  "notify": { "targets": ["console", "discord"] },
+  "notify": { "targets": ["console", "discord"], "discordWebhookEnv": "DISCORD_WEBHOOK_URL" },
+  "extraction": {
+    "role": "技術情報の客観的ファクト抽出器",
+    "viewpoints": ["技術的仕様変更", "アーキテクチャの提案", "OSSの破壊的変更", "実運用上の課題"],
+    "noFacts": "- 抽出すべきファクトなし"
+  },
   "firstRunLimit": 5,
   "collect": {
     "maxContentChars": 800000,

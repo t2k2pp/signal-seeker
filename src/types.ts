@@ -103,6 +103,19 @@ export interface LLMEndpoint {
 
 export type NotifyTarget = "console" | "discord";
 
+/**
+ * 要約の抽出観点(チャンネル=ジャンルごとに変える)。日本語出力・客観性ルールは共通で、
+ * ここで「役割(role)」と「観点(viewpoints)」だけ差し替える。
+ */
+export interface ExtractionConfig {
+  /** 抽出器の役割。例「技術情報の客観的ファクト抽出器」「米国株式市場の客観的ファクト抽出器」。 */
+  role: string;
+  /** 抽出する観点(箇条書きの見出し)。ジャンルに合わせて指定。 */
+  viewpoints: string[];
+  /** 「ファクト無し」時の固定出力。省略時は共通既定。score 側の判定とも揃える。 */
+  noFacts?: string;
+}
+
 /** 収集動作の設定。 */
 export interface CollectConfig {
   /** 1記事あたり保持・要約に渡す最大文字数 (既定 8000)。 */
@@ -202,12 +215,20 @@ export interface RuntimeConfig {
 }
 
 export interface AppConfig {
+  /** チャンネルの表示名(レポート/通知の見出しに併記)。未指定ならチャンネルID。 */
+  name?: string;
   llm: {
     endpoint: LLMEndpoint;
     /** 重要記事の深掘り用 (未指定なら endpoint を流用)。 */
     deepEndpoint?: LLMEndpoint;
   };
-  notify: { targets: NotifyTarget[] };
+  notify: {
+    targets: NotifyTarget[];
+    /** Discord webhook URL を保持する環境変数名(チャンネルごとに別の投稿先)。 */
+    discordWebhookEnv?: string;
+  };
+  /** 要約の抽出観点(ジャンル別)。 */
+  extraction: ExtractionConfig;
   /** 初回実行時、source毎に取り込む最大件数 (差分ノイズ抑制)。 */
   firstRunLimit: number;
   collect: CollectConfig;

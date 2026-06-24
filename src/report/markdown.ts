@@ -37,10 +37,11 @@ function renderOthers(others: SummarizedItem[], lines: string[]): void {
 export function renderMarkdown(model: ReportModel): string {
   const weekly = model.kind === "weekly";
   const runTag = model.runId != null ? ` (run #${model.runId})` : "";
+  const ch = model.channelName ? `[${model.channelName}] ` : "";
   const heading =
     weekly && model.period
-      ? `# SignalSeeker 週次レポート ${model.period.start} 〜 ${model.period.end}（${model.period.days}日間）`
-      : `# SignalSeeker レポート ${model.date}${runTag}`;
+      ? `# SignalSeeker ${ch}週次レポート ${model.period.start} 〜 ${model.period.end}（${model.period.days}日間）`
+      : `# SignalSeeker ${ch}レポート ${model.date}${runTag}`;
   const lines: string[] = [heading, ""];
 
   if (model.total === 0) {
@@ -93,8 +94,13 @@ export function renderMarkdown(model: ReportModel): string {
  * RunResult から Markdown レポートを生成する(従来の入口)。
  * 構造化は buildReportModel に委譲し、ここは描画のみ。HTML版と内容が一致する。
  */
-export function buildMarkdown(result: RunResult, curation: CurationConfig, runId: number | null = null): string {
-  return renderMarkdown(buildReportModel(result, curation, { runId }));
+export function buildMarkdown(
+  result: RunResult,
+  curation: CurationConfig,
+  runId: number | null = null,
+  channelName: string | null = null,
+): string {
+  return renderMarkdown(buildReportModel(result, curation, { runId, channelName }));
 }
 
 export type { SeriesGroup };

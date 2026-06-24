@@ -128,11 +128,12 @@ function renderSourceCard(sb: SourceBlock, showState: boolean): string {
 export function renderHtml(model: ReportModel): string {
   const weekly = model.kind === "weekly";
   const runTag = model.runId != null ? `run #${model.runId}` : "run —";
+  const ch = model.channelName ? `[${model.channelName}] ` : "";
   // タイトル(週次は期間、日次は日付+run)とサブタイトル・件数表記を kind で切替。
   const titleText = weekly
-    ? `週次レポート ${model.period?.start ?? ""} 〜 ${model.period?.end ?? ""}`
-    : `レポート ${model.date} (${runTag})`;
-  const brandText = weekly ? "SignalSeeker 週次レポート" : "SignalSeeker レポート";
+    ? `${ch}週次レポート ${model.period?.start ?? ""} 〜 ${model.period?.end ?? ""}`
+    : `${ch}レポート ${model.date} (${runTag})`;
+  const brandText = weekly ? `SignalSeeker ${ch}週次レポート` : `SignalSeeker ${ch}レポート`;
   const subText = weekly
     ? `${model.period?.start ?? ""} 〜 ${model.period?.end ?? ""} ・ ${model.period?.days ?? ""}日間 ・ 収集日ベース`
     : `${model.date} ・ ${runTag}`;

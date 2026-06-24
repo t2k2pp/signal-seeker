@@ -10,8 +10,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 /** プロジェクトルート (src/ の1つ上)。config/ と data/ の基準。 */
 export const PROJECT_ROOT = join(here, "..");
 
-export const CONFIG_PATH = join(PROJECT_ROOT, "config", "config.json");
-export const SOURCES_PATH = join(PROJECT_ROOT, "config", "sources.json");
+/** チャンネル設定の基準ディレクトリ。各チャンネルは config/channels/<id>/ 配下に config.json + sources.json を持つ。 */
+export const CHANNELS_DIR = join(PROJECT_ROOT, "config", "channels");
 
 function readJson<T>(full: string, label: string): T {
   try {
@@ -21,15 +21,27 @@ function readJson<T>(full: string, label: string): T {
   }
 }
 
-/** 既定値を適用した実行用設定を返す。 */
-export function loadConfig(): AppConfig {
-  const cfg = readJson<AppConfig>(CONFIG_PATH, "config/config.json");
+/** 既定の抽出観点(AI技術系)。チャンネルが extraction を持たない場合のフォールバック。 */
+const DEFAULT_EXTRACTION: AppConfig["extraction"] = {
+  role: "技術情報の客観的ファクト抽出器",
+  viewpoints: ["技術的仕様変更", "アーキテクチャの提案", "OSSの破壊的変更", "実運用上の課題"],
+  noFacts: "- 抽出すべきファクトなし",
+};
+
+/** 指定パスの config.json を読み、既定値を適用した実行用設定を返す。 */
+export function loadConfig(configPath: string): AppConfig {
+  const cfg = readJson<AppConfig>(configPath, configPath);
   if (!cfg.llm?.endpoint?.providerType || !cfg.llm.endpoint.model) {
-    throw new Error("config.json: llm.endpoint.providerType と model は必須です");
+    throw new Error(`${configPath}: llm.endpoint.providerType と model は必須です`);
   }
   if (!Array.isArray(cfg.notify?.targets)) {
-    throw new Error("config.json: notify.targets は配列で指定してください");
+    throw new Error(`${configPath}: notify.targets は配列で指定してください`);
   }
+  cfg.extraction = {
+    role: cfg.extraction?.role ?? DEFAULT_EXTRACTION.role,
+    viewpoints: cfg.extraction?.viewpoints?.length ? cfg.extraction.viewpoints : DEFAULT_EXTRACTION.viewpoints,
+    noFacts: cfg.extraction?.noFacts ?? DEFAULT_EXTRACTION.noFacts,
+  };
   cfg.firstRunLimit ??= 5;
 
   cfg.collect = {
@@ -94,27 +106,27 @@ export function loadConfig(): AppConfig {
 }
 
 /** 既定値を適用せず、ファイルそのままの内容を返す(設定編集ツール用)。 */
-export function loadRawConfig(): Record<string, unknown> {
-  return readJson<Record<string, unknown>>(CONFIG_PATH, "config/config.json");
+export function loadRawConfig(configPath: string): Record<string, unknown> {
+  return readJson<Record<string, unknown>>(configPath, configPath);
 }
 
-export function saveRawConfig(obj: unknown): void {
-  writeFileSync(CONFIG_PATH, JSON.stringify(obj, null, 2) + "\n", "utf-8");
+export function saveRawConfig(configPath: string, obj: unknown): void {
+  writeFileSync(configPath, JSON.stringify(obj, null, 2) + "\n", "utf-8");
 }
 
-export function loadSources(): Source[] {
-  const sources = readJson<Source[]>(SOURCES_PATH, "config/sources.json");
+export function loadSources(sourcesPath: string): Source[] {
+  const sources = readJson<Source[]>(sourcesPath, sourcesPath);
   if (!Array.isArray(sources)) {
-    throw new Error("sources.json はソース配列で指定してください");
+    throw new Error(`${sourcesPath}: ソース配列で指定してください`);
   }
   return sources.filter((s) => s.enabled);
 }
 
 /** enabled に関わらず全ソースを返す(設定編集ツール用)。 */
-export function loadAllSources(): Source[] {
-  return readJson<Source[]>(SOURCES_PATH, "config/sources.json");
+export function loadAllSources(sourcesPath: string): Source[] {
+  return readJson<Source[]>(sourcesPath, sourcesPath);
 }
 
-export function saveSources(sources: Source[]): void {
-  writeFileSync(SOURCES_PATH, JSON.stringify(sources, null, 2) + "\n", "utf-8");
+export function saveSources(sourcesPath: string, sources: Source[]): void {
+  writeFileSync(sourcesPath, JSON.stringify(sources, null, 2) + "\n", "utf-8");
 }

@@ -1,0 +1,56 @@
+{
+  "name": "米国株",
+  "llm": {
+    "endpoint": {
+      "providerType": "llamacpp",
+      "model": "gemma-4-31B-it-f16.gguf",
+      "baseUrl": "http://192.168.1.201:9082/v1"
+    },
+    "deepEndpoint": {
+      "providerType": "anthropic",
+      "model": "claude-opus-4-8",
+      "apiKey": "env:ANTHROPIC_API_KEY"
+    }
+  },
+  "notify": { "targets": ["console", "discord"], "discordWebhookEnv": "DISCORD_WEBHOOK_US_STOCKS" },
+  "extraction": {
+    "role": "米国株式市場の客観的ファクト抽出器",
+    "viewpoints": [
+      "業績・ガイダンス（決算・売上・EPS）",
+      "資本政策（自社株買い・配当・増資・M&A）",
+      "規制・政策・金利の影響",
+      "セクター・主要銘柄の動向"
+    ],
+    "noFacts": "- 抽出すべきファクトなし"
+  },
+  "firstRunLimit": 5,
+  "collect": {
+    "maxContentChars": 800000,
+    "fetchArticleBody": true,
+    "articleBodyMinChars": 400,
+    "perHostMinIntervalMs": 4000
+  },
+  "curation": {
+    "rankByScore": true,
+    "groupReleaseSeries": false,
+    "enrichAttention": false,
+    "sources": { "hfPapers": false, "semanticScholar": false, "github": false },
+    "fetchTimeoutMs": 15000,
+    "weights": { "recency": 0.5, "attention": 0.1, "content": 0.4 },
+    "recencyHalfLifeDays": 5,
+    "demoteFactor": 0.3
+  },
+  "wiki": { "enabled": true, "vaultPath": "data/us-stocks/wiki", "defaultTags": ["signalseeker", "us-stocks"] },
+  "runtime": {
+    "http": {
+      "llmChatTimeoutMs": 6000000,
+      "llmTestTimeoutMs": 50000,
+      "rssTimeoutMs": 20000,
+      "discordTimeoutMs": 150000,
+      "discordRetryUnitMs": 1000
+    },
+    "playwright": { "navTimeoutMs": 30000, "articleTimeoutMs": 25000 },
+    "summarize": { "maxOutputTokens": 8000, "maxRetries": 2, "retryBackoffMs": 3000 },
+    "logging": { "dir": "data/us-stocks/logs", "level": "info", "maxIoChars": 0 }
+  }
+}

@@ -9,8 +9,36 @@
 //   npm run config -- source set <id> <field> <value>
 //   npm run config                                    対話メニュー(ソース追加もこちら)
 import { createInterface } from "node:readline/promises";
-import { loadRawConfig, saveRawConfig, loadAllSources, saveSources, loadConfig } from "../config.js";
+import { join } from "node:path";
+import { CHANNELS_DIR, loadRawConfig, saveRawConfig, loadAllSources, saveSources, loadConfig } from "../config.js";
+import { channelsOrExit, resolveChannel } from "../channel.js";
 import type { Source, SourceType } from "../types.js";
+
+// 対象チャンネル(1つ)を解決し、その config/sources を編集対象にする。
+const _ids = channelsOrExit();
+if (_ids.length !== 1) {
+  console.error(`設定編集は1チャンネルを指定してください(--channel=<id>)。対象: ${_ids.join(", ")}`);
+  process.exit(1);
+}
+const channel = resolveChannel(_ids[0]!);
+const CONFIG_PATH = join(CHANNELS_DIR, channel.id, "config.json");
+const SOURCES_PATH = join(CHANNELS_DIR, channel.id, "sources.json");
+
+// `--channel`(と値)を除いた素の引数。サブコマンド判定/対話判定に使う。
+const cliArgs: string[] = (() => {
+  const raw = process.argv.slice(2);
+  const out: string[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const a = raw[i]!;
+    if (a === "--channel") {
+      i++;
+      continue;
+    }
+    if (a.startsWith("--channel=")) continue;
+    out.push(a);
+  }
+  return out;
+})();
 
 type Obj = Record<string, unknown>;
 
@@ -45,7 +73,7 @@ function parseValue(raw: string): unknown {
 
 function validateConfig(): void {
   try {
-    loadConfig();
+    loadConfig(CONFIG_PATH);
     console.log("✓ config.json は妥当です。");
   } catch (err) {
     console.warn(`⚠ 検証エラー: ${(err as Error).message}`);
@@ -53,15 +81,15 @@ function validateConfig(): void {
 }
 
 function setConfigValue(path: string, value: unknown): void {
-  const cfg = loadRawConfig();
+  const cfg = loadRawConfig(CONFIG_PATH);
   setPath(cfg, path, value);
-  saveRawConfig(cfg);
+  saveRawConfig(CONFIG_PATH, cfg);
   console.log(`set ${path} = ${JSON.stringify(value)}`);
   validateConfig();
 }
 
 function printSources(): void {
-  const sources = loadAllSources();
+  const sources = loadAllSources(SOURCES_PATH);
   console.log(`=== sources (${sources.length}) ===`);
   for (const s of sources) {
     console.log(`[${s.enabled ? "x" : " "}] ${s.id.padEnd(20)} ${(s.type ?? "auto").padEnd(15)} ${s.name}`);
@@ -70,23 +98,23 @@ function printSources(): void {
 }
 
 function updateSource(id: string, mut: (s: Source) => void): void {
-  const sources = loadAllSources();
+  const sources = loadAllSources(SOURCES_PATH);
   const s = sources.find((x) => x.id === id);
   if (!s) {
     console.error(`ソースが見つかりません: ${id}`);
     process.exit(1);
   }
   mut(s);
-  saveSources(sources);
+  saveSources(SOURCES_PATH, sources);
   console.log(`更新: ${id}`);
 }
 
 // ---- サブコマンド ----
 async function runSubcommand(): Promise<void> {
-  const [cmd, ...rest] = process.argv.slice(2);
+  const [cmd, ...rest] = cliArgs;
   switch (cmd) {
     case "show": {
-      console.log(JSON.stringify(loadRawConfig(), null, 2));
+      console.log(JSON.stringify(loadRawConfig(CONFIG_PATH), null, 2));
       console.log("");
       printSources();
       break;
@@ -94,7 +122,7 @@ async function runSubcommand(): Promise<void> {
     case "get": {
       const path = rest[0];
       if (!path) return usage();
-      console.log(JSON.stringify(getPath(loadRawConfig(), path), null, 2));
+      console.log(JSON.stringify(getPath(loadRawConfig(CONFIG_PATH), path), null, 2));
       break;
     }
     case "set": {
@@ -110,8 +138,8 @@ async function runSubcommand(): Promise<void> {
       if (sub === "disable") return void updateSource(sargs[0]!, (s) => (s.enabled = false));
       if (sub === "remove") {
         const id = sargs[0]!;
-        const sources = loadAllSources().filter((s) => s.id !== id);
-        saveSources(sources);
+        const sources = loadAllSources(SOURCES_PATH).filter((s) => s.id !== id);
+        saveSources(SOURCES_PATH, sources);
         console.log(`削除: ${id}`);
         return;
       }
@@ -132,13 +160,13 @@ async function runSubcommand(): Promise<void> {
 function usage(): void {
   console.log(
     [
-      "使い方:",
-      "  npm run config -- show",
-      "  npm run config -- get <dotpath>",
-      "  npm run config -- set <dotpath> <value>",
-      "  npm run config -- source list|enable <id>|disable <id>|remove <id>",
-      "  npm run config -- source set <id> <field> <value>",
-      "  npm run config                 (対話メニュー)",
+      "使い方(--channel=<id> で対象チャンネルを指定):",
+      "  npm run config -- --channel=<id> show",
+      "  npm run config -- --channel=<id> get <dotpath>",
+      "  npm run config -- --channel=<id> set <dotpath> <value>",
+      "  npm run config -- --channel=<id> source list|enable <id>|disable <id>|remove <id>",
+      "  npm run config -- --channel=<id> source set <id> <field> <value>",
+      "  npm run config -- --channel=<id>   (対話メニュー)",
     ].join("\n"),
   );
 }
@@ -156,11 +184,11 @@ async function runInteractive(): Promise<void> {
       const c = (await ask("選択> ")).trim();
       if (c === "0" || c === "") break;
       if (c === "1") {
-        console.log(JSON.stringify(loadRawConfig(), null, 2));
+        console.log(JSON.stringify(loadRawConfig(CONFIG_PATH), null, 2));
       } else if (c === "2") {
         const path = (await ask("dotpath (例 runtime.http.llmChatTimeoutMs)> ")).trim();
         if (!path) continue;
-        console.log(`現在値: ${JSON.stringify(getPath(loadRawConfig(), path))}`);
+        console.log(`現在値: ${JSON.stringify(getPath(loadRawConfig(CONFIG_PATH), path))}`);
         const val = (await ask("新しい値> ")).trim();
         if (val) setConfigValue(path, parseValue(val));
       } else if (c === "3") {
@@ -174,7 +202,7 @@ async function runInteractive(): Promise<void> {
       } else if (c === "6") {
         const id = (await ask("削除するソースID> ")).trim();
         if (id) {
-          saveSources(loadAllSources().filter((s) => s.id !== id));
+          saveSources(SOURCES_PATH, loadAllSources(SOURCES_PATH).filter((s) => s.id !== id));
           console.log(`削除: ${id}`);
         }
       }
@@ -201,17 +229,17 @@ async function addSourceInteractive(ask: (q: string) => Promise<string>): Promis
     const maxLinks = (await ask("maxLinks [15]> ")).trim();
     if (maxLinks) src.maxLinks = Number(maxLinks);
   }
-  const sources = loadAllSources();
+  const sources = loadAllSources(SOURCES_PATH);
   if (sources.some((s) => s.id === id)) {
     console.warn(`同じID(${id})が既に存在します。中止しました。`);
     return;
   }
   sources.push(src);
-  saveSources(sources);
+  saveSources(SOURCES_PATH, sources);
   console.log(`追加: ${id}`);
 }
 
-const interactive = process.argv.length <= 2;
+const interactive = cliArgs.length === 0;
 (interactive ? runInteractive() : runSubcommand()).catch((err) => {
   console.error("エラー:", (err as Error).message);
   process.exit(1);

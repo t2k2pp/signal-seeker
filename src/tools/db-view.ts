@@ -1,12 +1,15 @@
-// 開発者向け signalseeker.db 閲覧CLI。  npm run db -- <cmd> [opts]
+// 開発者向け signalseeker.db 閲覧CLI。  npm run db -- --channel=<id> <cmd> [opts]
 //   stats                              集計(既定)
 //   items [--source ID] [--pending] [--needing] [--reported] [--limit N]
 //   runs [--limit N]                   実行履歴(status/時間/件数/ログ)
 //   search <text> [--limit N]          全文(LIKE)検索
 //   item <sourceId> <itemKey>          1件の詳細(要約・本文込み)
 import { SqliteStore } from "../db.js";
+import { channelsOrExit, resolveChannel } from "../channel.js";
 
 function arg(flag: string): string | undefined {
+  const eq = process.argv.find((a) => a.startsWith(`${flag}=`));
+  if (eq) return eq.slice(flag.length + 1);
   const i = process.argv.indexOf(flag);
   return i >= 0 ? process.argv[i + 1] : undefined;
 }
@@ -22,8 +25,29 @@ function trunc(s: string, n: number): string {
   return oneLine.length <= n ? oneLine : oneLine.slice(0, n - 1) + "…";
 }
 
-const cmd = process.argv[2] && !process.argv[2].startsWith("-") ? process.argv[2] : "stats";
-const store = new SqliteStore();
+// 位置引数(フラグと --channel/--source/--limit の値を除いた素のトークン)を抽出する。
+const VALUE_FLAGS = new Set(["--channel", "--source", "--limit"]);
+const positionals: string[] = [];
+{
+  const raw = process.argv.slice(2);
+  for (let i = 0; i < raw.length; i++) {
+    const a = raw[i]!;
+    if (a.startsWith("-")) {
+      if (VALUE_FLAGS.has(a)) i++; // スペース区切りの値を読み飛ばす
+      continue;
+    }
+    positionals.push(a);
+  }
+}
+
+const ids = channelsOrExit();
+if (ids.length !== 1) {
+  console.error(`DB閲覧は1チャンネルを指定してください(--channel=<id>)。対象: ${ids.join(", ")}`);
+  process.exit(1);
+}
+const channel = resolveChannel(ids[0]!);
+const cmd = positionals[0] ?? "stats";
+const store = new SqliteStore(channel.paths.db);
 
 try {
   switch (cmd) {
@@ -61,15 +85,15 @@ try {
       for (const r of runs) {
         const kind = r.dry_run ? "dry " : "real";
         console.log(`#${r.id} [${r.status}] ${kind} 開始=${r.started_at} 終了=${r.finished_at ?? "-"} 新規=${r.new_count}`);
-        if (r.log_label) console.log(`     log: data/logs/run-${r.log_label}.jsonl`);
+        if (r.log_label) console.log(`     log: ${channel.paths.logsDir}/run-${r.log_label}.jsonl`);
         if (r.error) console.log(`     error: ${trunc(r.error, 200)}`);
       }
       break;
     }
     case "search": {
-      const text = process.argv[3];
-      if (!text || text.startsWith("-")) {
-        console.error("使い方: npm run db -- search <text> [--limit N]");
+      const text = positionals[1];
+      if (!text) {
+        console.error("使い方: npm run db -- --channel=<id> search <text> [--limit N]");
         process.exit(1);
       }
       const items = store.searchItems(text, num("--limit", 50));
@@ -81,10 +105,10 @@ try {
       break;
     }
     case "item": {
-      const sourceId = process.argv[3];
-      const itemKey = process.argv[4];
+      const sourceId = positionals[1];
+      const itemKey = positionals[2];
       if (!sourceId || !itemKey) {
-        console.error("使い方: npm run db -- item <sourceId> <itemKey>");
+        console.error("使い方: npm run db -- --channel=<id> item <sourceId> <itemKey>");
         process.exit(1);
       }
       const it = store.getItem(sourceId, itemKey);

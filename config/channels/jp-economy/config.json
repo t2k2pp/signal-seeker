@@ -1,0 +1,56 @@
+{
+  "name": "国内景気",
+  "llm": {
+    "endpoint": {
+      "providerType": "llamacpp",
+      "model": "gemma-4-31B-it-f16.gguf",
+      "baseUrl": "http://192.168.1.201:9082/v1"
+    },
+    "deepEndpoint": {
+      "providerType": "anthropic",
+      "model": "claude-opus-4-8",
+      "apiKey": "env:ANTHROPIC_API_KEY"
+    }
+  },
+  "notify": { "targets": ["console", "discord"], "discordWebhookEnv": "DISCORD_WEBHOOK_JP_ECONOMY" },
+  "extraction": {
+    "role": "日本国内の景気判断のための客観的ファクト抽出器",
+    "viewpoints": [
+      "経済指標（GDP・物価・雇用・消費・生産）",
+      "金融政策・財政政策の動き",
+      "為替・金利・市況",
+      "業界・地域の景況感"
+    ],
+    "noFacts": "- 抽出すべきファクトなし"
+  },
+  "firstRunLimit": 5,
+  "collect": {
+    "maxContentChars": 800000,
+    "fetchArticleBody": true,
+    "articleBodyMinChars": 400,
+    "perHostMinIntervalMs": 4000
+  },
+  "curation": {
+    "rankByScore": true,
+    "groupReleaseSeries": false,
+    "enrichAttention": false,
+    "sources": { "hfPapers": false, "semanticScholar": false, "github": false },
+    "fetchTimeoutMs": 15000,
+    "weights": { "recency": 0.5, "attention": 0.1, "content": 0.4 },
+    "recencyHalfLifeDays": 7,
+    "demoteFactor": 0.3
+  },
+  "wiki": { "enabled": true, "vaultPath": "data/jp-economy/wiki", "defaultTags": ["signalseeker", "jp-economy"] },
+  "runtime": {
+    "http": {
+      "llmChatTimeoutMs": 6000000,
+      "llmTestTimeoutMs": 50000,
+      "rssTimeoutMs": 20000,
+      "discordTimeoutMs": 150000,
+      "discordRetryUnitMs": 1000
+    },
+    "playwright": { "navTimeoutMs": 30000, "articleTimeoutMs": 25000 },
+    "summarize": { "maxOutputTokens": 8000, "maxRetries": 2, "retryBackoffMs": 3000 },
+    "logging": { "dir": "data/jp-economy/logs", "level": "info", "maxIoChars": 0 }
+  }
+}

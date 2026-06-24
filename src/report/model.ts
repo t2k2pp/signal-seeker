@@ -27,6 +27,8 @@ export interface CatBlock {
 export interface ReportModel {
   /** daily=日次 / weekly=期間振り返り。見出し・集計表記が変わる。 */
   kind: ReportKind;
+  /** チャンネル表示名(マルチチャンネル識別。見出しに併記)。単一運用では未指定可。 */
+  channelName: string | null;
   date: string;
   /** weekly のときの対象期間。daily は null。 */
   period: ReportPeriod | null;
@@ -46,6 +48,8 @@ export interface BuildModelOptions {
   date?: string;
   kind?: ReportKind;
   period?: ReportPeriod | null;
+  /** チャンネル表示名(見出しに併記)。 */
+  channelName?: string | null;
 }
 
 function today(): string {
@@ -83,6 +87,7 @@ export function buildReportModel(
 
   const model: ReportModel = {
     kind: opts.kind ?? "daily",
+    channelName: opts.channelName ?? null,
     date: opts.date ?? today(),
     period: opts.period ?? null,
     runId: opts.runId ?? null,

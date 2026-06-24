@@ -35,12 +35,13 @@ export async function notifyDiscord(
   message: string,
   file: DiscordAttachment,
   opts: DiscordOptions,
+  webhookUrl: string | undefined,
 ): Promise<void> {
-  const url = process.env.DISCORD_WEBHOOK_URL;
-  if (!url) {
-    console.warn("[discord] DISCORD_WEBHOOK_URL 未設定のためスキップしました。");
+  if (!webhookUrl) {
+    console.warn("[discord] webhook URL 未設定のためスキップしました(チャンネルの notify.discordWebhookEnv / .env を確認)。");
     return;
   }
+  const url = webhookUrl;
 
   const bytes = Buffer.byteLength(file.data, "utf-8");
   if (bytes > ATTACH_LIMIT) {
