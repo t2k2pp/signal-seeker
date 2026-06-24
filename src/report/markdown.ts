@@ -7,9 +7,10 @@ function stateBadge(item: SummarizedItem): string {
 }
 
 /** 1記事(系列の代表)を描画する。注目度バッジとスコアを見出し直下に併記。 */
-function renderPrimary(item: SummarizedItem, lines: string[]): void {
-  const badge = stateBadge(item);
-  lines.push(`#### ${badge} [${item.title}](${item.url})`);
+function renderPrimary(item: SummarizedItem, lines: string[], showState: boolean): void {
+  // 週次は収集日で窓を切るため状態(新規/更新/繰越)が一律になり無意味 → バッジを省く。
+  const head = showState ? `${stateBadge(item)} ` : "";
+  lines.push(`#### ${head}[${item.title}](${item.url})`);
   const meta: string[] = [];
   if (item.score != null) meta.push(`★${item.score.toFixed(2)}`);
   const att = attentionBadge(item.attention);
@@ -34,15 +35,24 @@ function renderOthers(others: SummarizedItem[], lines: string[]): void {
 
 /** 構造化モデルから Markdown を描画する。 */
 export function renderMarkdown(model: ReportModel): string {
+  const weekly = model.kind === "weekly";
   const runTag = model.runId != null ? ` (run #${model.runId})` : "";
-  const lines: string[] = [`# SignalSeeker レポート ${model.date}${runTag}`, ""];
+  const heading =
+    weekly && model.period
+      ? `# SignalSeeker 週次レポート ${model.period.start} 〜 ${model.period.end}（${model.period.days}日間）`
+      : `# SignalSeeker レポート ${model.date}${runTag}`;
+  const lines: string[] = [heading, ""];
 
   if (model.total === 0) {
-    lines.push("今回の新規・更新はありませんでした。", "");
+    lines.push(
+      weekly ? "対象期間に該当する記事はありませんでした。" : "今回の新規・更新はありませんでした。",
+      "",
+    );
     return lines.join("\n");
   }
 
-  lines.push(`新規・更新: **${model.total}件**`, "");
+  if (weekly) lines.push(`対象期間の記事: **${model.total}件**（収集日ベース）`, "");
+  else lines.push(`新規・更新: **${model.total}件**`, "");
   if (model.rankByScore) lines.push("_重要度スコア(★)降順・「現地での注目度」併記_", "");
 
   // カテゴリ別件数の俯瞰(Mermaid 円グラフ。GitHub/Obsidian/VSCode 等でレンダリングされる)
@@ -69,7 +79,7 @@ export function renderMarkdown(model: ReportModel): string {
     for (const sb of cb.sources) {
       lines.push(`### ${sb.sourceName}`, "");
       for (const g of sb.groups) {
-        renderPrimary(g.primary, lines);
+        renderPrimary(g.primary, lines, !weekly);
         renderOthers(g.others, lines);
       }
     }
@@ -84,7 +94,7 @@ export function renderMarkdown(model: ReportModel): string {
  * 構造化は buildReportModel に委譲し、ここは描画のみ。HTML版と内容が一致する。
  */
 export function buildMarkdown(result: RunResult, curation: CurationConfig, runId: number | null = null): string {
-  return renderMarkdown(buildReportModel(result, curation, runId));
+  return renderMarkdown(buildReportModel(result, curation, { runId }));
 }
 
 export type { SeriesGroup };

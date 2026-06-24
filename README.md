@@ -22,6 +22,7 @@ Collect (Playwright + RSS) → Summarize (Claude/ローカルLLM) → Report/Not
 | ② 概要化 | `src/summarizer/` + `src/llm/` | **使用** | Claude / ローカルLLM で4観点の客観ファクト抽出 |
 | ③ 送付 | `src/report/` + `src/notify/` | **不使用** | Markdown 整形 + Discord Webhook(全文を添付ファイルで送付)/ コンソール |
 | Wiki生成 | `src/wiki/` | **不使用** | DB の要約から Obsidian vault を機械的に生成(検索/カテゴリ/リンク) |
+| 期間集計(任意) | `src/report/weekly-cli.ts` | **不使用** | 蓄積データから週次相当(最大15日)レポートを生成(`npm run weekly`) |
 | 整形(任意) | `src/report/html.ts` + `cli.ts` | **不使用** | レポートを HTML インフォグラフィックに整形(`npm run infographic`) |
 
 ### データの蓄積と再利用
@@ -48,6 +49,7 @@ npm run crawl        # 収集 → 要約 → レポート/通知 → Wiki生成(
 npm run crawl:dry    # 同上だが通知せず・配信済みにしない(次の本実行に繰り越し)
 npm run crawl:resume # 収集をスキップしDBの未処理分から再開(中断復旧用)
 npm run wiki         # DBの蓄積から Obsidian vault だけを再生成(収集・要約なし)
+npm run weekly       # 蓄積データから週次相当レポート(最大15日)を作成(収集なし、下記)
 npm run infographic  # 直近レポートを HTML インフォグラフィックに整形(見栄え重視、下記)
 npm run db -- stats  # DB閲覧(開発者向け、下記)
 npm run config       # 設定メンテナンス(対話メニュー、下記)
@@ -171,6 +173,33 @@ data/wiki/
 
 > 現状(MVP)はカテゴリ分け・グループ化を**メタデータで機械的に**行います。AIによるテーマ抽出/概観の自動生成は
 > 将来の拡張ポイントです(`src/wiki/` を差し替え)。
+
+## 週次相当レポート(最大15日)
+
+新しい取得はせず、**手元に溜まっているデータ**から一定期間を振り返って整理するレポートです。基準は「今から
+7日」ではなく、**最後に集めたデータからさかのぼってN日**です(既定7日)。期間は指定でき、**最大15日**まで
+広げられます。月次はまだありません(月次は別の見方になるため分けています)。
+
+```bash
+npm run weekly                       # 最後の収集日から過去7日分(既定)
+npm run weekly -- --days=15          # 過去15日分(最大)
+npm run weekly -- --until=2026-06-20 # 終了日を指定(その日まで)。--days と併用可
+npm run weekly -- --until=2026-06-20 --days=10
+```
+
+- 期間の区切りは**記事を集めた日(収集日)**を基準にします。
+- 出力: `data/reports/report-weekly-<終了日>-<日数>d.md`(本文)と同名の `.json`(再描画用データ)。
+- コマンドの最後に、HTML 化のためのコマンドが案内として表示されます。
+- `--days` は 1〜15 の範囲です(範囲外はエラーになります)。
+
+### 週次レポートを HTML にする
+
+週次レポートの HTML 化は、下の「HTML インフォグラフィック」と同じコマンドに、案内された見出しラベルを渡すだけです。
+
+```bash
+npm run infographic -- --label=weekly-2026-06-24-7d              # HTML化(Discordにも送付)
+npm run infographic -- --label=weekly-2026-06-24-7d --no-discord # 送らずファイルだけ
+```
 
 ## HTML インフォグラフィック
 

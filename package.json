@@ -9,6 +9,7 @@
     "crawl:dry": "tsx src/index.ts --dry-run",
     "crawl:resume": "tsx src/index.ts --resume",
     "wiki": "tsx src/wiki/cli.ts",
+    "weekly": "tsx src/report/weekly-cli.ts",
     "infographic": "tsx src/report/cli.ts",
     "db": "tsx src/tools/db-view.ts",
     "config": "tsx src/tools/config-edit.ts",

@@ -216,6 +216,13 @@ export interface AppConfig {
   runtime: RuntimeConfig;
 }
 
+/** レポートの対象期間(週次相当のレポートで使う。start/end は YYYY-MM-DD)。 */
+export interface ReportPeriod {
+  start: string;
+  end: string;
+  days: number;
+}
+
 /** 1回の実行結果サマリ。 */
 export interface RunResult {
   /** 実行ID(runs.id)。レポート見出し・スナップショット・再描画の手がかり。 */

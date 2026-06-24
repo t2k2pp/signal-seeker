@@ -40,8 +40,12 @@ function parseSelector(): SnapshotSelector {
   return { latest: true };
 }
 
-/** Discord 本文用の短い案内(run-id と件数)。 */
+/** Discord 本文用の短い案内(run-id と件数 / 週次は期間と件数)。 */
 function summaryLine(snap: ReportSnapshot): string {
+  const total = snap.summarized.length;
+  if (snap.kind === "weekly" && snap.period) {
+    return `🗓 **SignalSeeker** 週次 ${snap.period.start}〜${snap.period.end}（${snap.period.days}日間）— HTMLインフォグラフィック ${total}件`;
+  }
   const runTag = snap.runId != null ? `run #${snap.runId}` : "run —";
   const c = snap.counts;
   return `🎨 **SignalSeeker** ${runTag} — HTMLインフォグラフィック（新規 ${c.new} / 更新 ${c.updated} / 繰越 ${c.carried}）`;
@@ -67,8 +71,12 @@ async function main(): Promise<void> {
     summarized: snap.summarized,
     errors: [],
   };
-  const model = buildReportModel(result, config.curation, snap.runId);
-  model.date = snap.date; // 過去runの再描画では当時の日付を使う
+  const model = buildReportModel(result, config.curation, {
+    runId: snap.runId,
+    date: snap.date, // 過去回の再描画では当時の日付/期間末を使う
+    kind: snap.kind ?? "daily",
+    period: snap.period ?? null,
+  });
 
   const html = renderHtml(model);
   const fileName = `report-${snap.runLabel}.html`;

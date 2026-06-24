@@ -83,7 +83,7 @@ function renderSummary(summary: string | null): string {
   return out.join("");
 }
 
-function renderArticle(item: SummarizedItem): string {
+function renderArticle(item: SummarizedItem, showState: boolean): string {
   const st = stateInfo(item);
   const meta: string[] = [];
   if (item.score != null) meta.push(`<span class="score">★${item.score.toFixed(2)}</span>`);
@@ -93,7 +93,7 @@ function renderArticle(item: SummarizedItem): string {
   return `
     <article class="article">
       <div class="art-head">
-        <span class="state" style="background:${st.color}">${st.label}</span>
+        ${showState ? `<span class="state" style="background:${st.color}">${st.label}</span>` : ""}
         <a class="title" href="${esc(item.url)}" target="_blank" rel="noopener">${esc(item.title)}</a>
       </div>
       ${meta.length ? `<div class="meta">${meta.join("")}</div>` : ""}
@@ -101,10 +101,10 @@ function renderArticle(item: SummarizedItem): string {
     </article>`;
 }
 
-function renderSourceCard(sb: SourceBlock): string {
+function renderSourceCard(sb: SourceBlock, showState: boolean): string {
   const groups = sb.groups
     .map((g) => {
-      const primary = renderArticle(g.primary);
+      const primary = renderArticle(g.primary, showState);
       if (g.others.length === 0) return primary;
       const others = g.others
         .map(
@@ -126,13 +126,28 @@ function renderSourceCard(sb: SourceBlock): string {
 
 /** 構造化モデルから HTML インフォグラフィックを描画する。 */
 export function renderHtml(model: ReportModel): string {
+  const weekly = model.kind === "weekly";
   const runTag = model.runId != null ? `run #${model.runId}` : "run —";
+  // タイトル(週次は期間、日次は日付+run)とサブタイトル・件数表記を kind で切替。
+  const titleText = weekly
+    ? `週次レポート ${model.period?.start ?? ""} 〜 ${model.period?.end ?? ""}`
+    : `レポート ${model.date} (${runTag})`;
+  const brandText = weekly ? "SignalSeeker 週次レポート" : "SignalSeeker レポート";
+  const subText = weekly
+    ? `${model.period?.start ?? ""} 〜 ${model.period?.end ?? ""} ・ ${model.period?.days ?? ""}日間 ・ 収集日ベース`
+    : `${model.date} ・ ${runTag}`;
+  const countsHtml = weekly
+    ? `<span class="count" style="color:${THEME.accent}"><b>${model.total}</b>件（対象期間）</span>`
+    : `<span class="count" style="color:${THEME.stateNew}"><b>${model.counts.new}</b>新規</span>
+      <span class="count" style="color:${THEME.stateUpdated}"><b>${model.counts.updated}</b>更新</span>
+      <span class="count" style="color:${THEME.stateCarried}"><b>${model.counts.carried}</b>繰越</span>`;
+  const footTag = weekly ? `${model.period?.start ?? ""} 〜 ${model.period?.end ?? ""}` : runTag;
   const head = `<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SignalSeeker レポート ${esc(model.date)} (${esc(runTag)})</title>
+<title>SignalSeeker ${esc(titleText)}</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -190,23 +205,22 @@ export function renderHtml(model: ReportModel): string {
 <body>
 <div class="wrap">
   <header>
-    <div class="brand"><span class="dot"></span>SignalSeeker レポート</div>
-    <div class="sub">${esc(model.date)} ・ ${esc(runTag)}</div>
+    <div class="brand"><span class="dot"></span>${brandText}</div>
+    <div class="sub">${esc(subText)}</div>
     <div class="counts">
-      <span class="count" style="color:${THEME.stateNew}"><b>${model.counts.new}</b>新規</span>
-      <span class="count" style="color:${THEME.stateUpdated}"><b>${model.counts.updated}</b>更新</span>
-      <span class="count" style="color:${THEME.stateCarried}"><b>${model.counts.carried}</b>繰越</span>
+      ${countsHtml}
     </div>
   </header>`;
 
   const foot = `
-  <footer>SignalSeeker — 一次情報キュレーション ・ ${esc(runTag)}</footer>
+  <footer>SignalSeeker — 一次情報キュレーション ・ ${esc(footTag)}</footer>
 </div>
 </body>
 </html>`;
 
   if (model.total === 0) {
-    return `${head}\n<p class="empty-report">今回の新規・更新はありませんでした。</p>${foot}`;
+    const msg = weekly ? "対象期間に該当する記事はありませんでした。" : "今回の新規・更新はありませんでした。";
+    return `${head}\n<p class="empty-report">${msg}</p>${foot}`;
   }
 
   const toc = `<nav class="toc">${model.catBlocks
@@ -218,7 +232,7 @@ export function renderHtml(model: ReportModel): string {
       (cb) => `
   <section class="cat" id="${anchor(cb.category)}">
     <h2>${esc(cb.category)}<span class="cat-count">${cb.count}件</span></h2>
-    <div class="cards">${cb.sources.map(renderSourceCard).join("")}</div>
+    <div class="cards">${cb.sources.map((sb) => renderSourceCard(sb, !weekly)).join("")}</div>
   </section>`,
     )
     .join("");

@@ -3,7 +3,8 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { PROJECT_ROOT } from "../config.js";
-import type { RunResult, SummarizedItem } from "../types.js";
+import type { ReportPeriod, RunResult, SummarizedItem } from "../types.js";
+import type { ReportKind } from "./model.js";
 
 const REPORTS_DIR = join(PROJECT_ROOT, "data", "reports");
 
@@ -17,6 +18,16 @@ export interface ReportSnapshot {
   date: string;
   counts: { new: number; updated: number; carried: number };
   summarized: SummarizedItem[];
+  /** daily=日次 / weekly=期間振り返り(無い旧スナップショットは daily 扱い)。 */
+  kind?: ReportKind;
+  /** weekly のときの対象期間。 */
+  period?: ReportPeriod | null;
+}
+
+/** writeSnapshot の追加情報(週次レポート用)。 */
+export interface SnapshotExtra {
+  kind?: ReportKind;
+  period?: ReportPeriod | null;
 }
 
 function snapshotPath(runLabel: string): string {
@@ -24,7 +35,7 @@ function snapshotPath(runLabel: string): string {
 }
 
 /** RunResult からスナップショットを書き出し、保存パスを返す。 */
-export function writeSnapshot(result: RunResult, runLabel: string): string {
+export function writeSnapshot(result: RunResult, runLabel: string, extra: SnapshotExtra = {}): string {
   mkdirSync(REPORTS_DIR, { recursive: true });
   const counts = { new: 0, updated: 0, carried: 0 };
   for (const it of result.summarized) counts[it.state]++;
@@ -32,9 +43,11 @@ export function writeSnapshot(result: RunResult, runLabel: string): string {
     runId: result.runId,
     runLabel,
     generatedAt: new Date().toISOString(),
-    date: new Date().toISOString().slice(0, 10),
+    date: extra.period?.end ?? new Date().toISOString().slice(0, 10),
     counts,
     summarized: result.summarized,
+    kind: extra.kind ?? "daily",
+    period: extra.period ?? null,
   };
   const path = snapshotPath(runLabel);
   writeFileSync(path, JSON.stringify(snapshot), "utf-8");

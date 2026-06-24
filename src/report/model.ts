@@ -1,8 +1,11 @@
 // レポートの「構造化モデル」。Markdown と HTML はこの同一モデルから描画するため、
 // 並び順・件数・グルーピングが両者で必ず一致する。スコア付与・カテゴリ/ソース集約・
 // 系列集約・並べ替え・目次素材の組み立てをここに集約する(描画はしない)。
-import type { CurationConfig, RunResult, SummarizedItem } from "../types.js";
+import type { CurationConfig, ReportPeriod, RunResult, SummarizedItem } from "../types.js";
 import { applyScores, groupBySeries, type SeriesGroup } from "../curation/score.js";
+
+/** レポートの種別。daily=日次(配信), weekly=期間振り返り(最大15日)。 */
+export type ReportKind = "daily" | "weekly";
 
 /** 1ソース分のブロック(系列集約済み)。 */
 export interface SourceBlock {
@@ -22,7 +25,11 @@ export interface CatBlock {
 
 /** レポート1回分の構造化モデル(描画の入力)。 */
 export interface ReportModel {
+  /** daily=日次 / weekly=期間振り返り。見出し・集計表記が変わる。 */
+  kind: ReportKind;
   date: string;
+  /** weekly のときの対象期間。daily は null。 */
+  period: ReportPeriod | null;
   /** 実行ID(run-id)。確認・再描画の手がかり。 */
   runId: number | null;
   /** 新規・更新・繰越の合計件数。 */
@@ -30,6 +37,15 @@ export interface ReportModel {
   counts: { new: number; updated: number; carried: number };
   rankByScore: boolean;
   catBlocks: CatBlock[];
+}
+
+/** buildReportModel のオプション。 */
+export interface BuildModelOptions {
+  runId?: number | null;
+  /** 見出しに出す日付(YYYY-MM-DD)。省略時は今日。 */
+  date?: string;
+  kind?: ReportKind;
+  period?: ReportPeriod | null;
 }
 
 function today(): string {
@@ -60,14 +76,16 @@ export function anchor(heading: string): string {
 export function buildReportModel(
   result: RunResult,
   curation: CurationConfig,
-  runId: number | null = null,
+  opts: BuildModelOptions = {},
 ): ReportModel {
   const counts = { new: 0, updated: 0, carried: 0 };
   for (const it of result.summarized) counts[it.state]++;
 
   const model: ReportModel = {
-    date: today(),
-    runId,
+    kind: opts.kind ?? "daily",
+    date: opts.date ?? today(),
+    period: opts.period ?? null,
+    runId: opts.runId ?? null,
     total: result.summarized.length,
     counts,
     rankByScore: curation.rankByScore,
