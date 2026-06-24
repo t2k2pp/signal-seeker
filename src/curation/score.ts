@@ -23,6 +23,14 @@ function attentionScore(a: AttentionMetrics | null | undefined): number {
 
 const NO_FACTS = /ファクト(は)?(一切)?(無|な)し|抽出すべき(技術的)?ファクトなし/;
 
+/**
+ * 「ファクト抽出なし」の要約か判定する(レポートで本文を出さず末尾リンクに回す用)。
+ * 未要約(null/空)は false(別途プレースホルダ表示するため、ここには含めない)。
+ */
+export function isNoFacts(summary: string | null): boolean {
+  return !!summary && summary.trim().length > 0 && NO_FACTS.test(summary);
+}
+
 /** 内容スコア: ファクト無し=0 / 破壊的変更あり=1 / それ以外で要約あり=0.5。 */
 function contentScore(summary: string | null): number {
   if (!summary || !summary.trim()) return 0;

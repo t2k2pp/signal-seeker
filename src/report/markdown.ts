@@ -1,6 +1,6 @@
 import type { CurationConfig, RunResult, SummarizedItem } from "../types.js";
 import { attentionBadge, type SeriesGroup } from "../curation/score.js";
-import { anchor, buildReportModel, type ReportModel } from "./model.js";
+import { anchor, buildReportModel, type NoFactLink, type ReportModel } from "./model.js";
 
 function stateBadge(item: SummarizedItem): string {
   return item.state === "new" ? "🆕" : item.state === "updated" ? "♻️更新" : "📥繰越";
@@ -29,6 +29,16 @@ function renderOthers(others: SummarizedItem[], lines: string[]): void {
   for (const o of others) {
     const att = attentionBadge(o.attention);
     lines.push(`- [${o.title}](${o.url})${att ? `  ·  ${att}` : ""}${o.publishedAt ? `  ·  ${o.publishedAt}` : ""}`);
+  }
+  lines.push("", "</details>", "");
+}
+
+/** ファクト抽出なし記事をソース末尾に折りたたみでリンク列挙する。 */
+function renderNoFacts(noFacts: NoFactLink[], lines: string[]): void {
+  if (noFacts.length === 0) return;
+  lines.push(`<details><summary>参考(ファクト抽出なし) ${noFacts.length}件</summary>`, "");
+  for (const n of noFacts) {
+    lines.push(`- [${n.title}](${n.url})${n.publishedAt ? `  ·  ${n.publishedAt}` : ""}`);
   }
   lines.push("", "</details>", "");
 }
@@ -83,6 +93,7 @@ export function renderMarkdown(model: ReportModel): string {
         renderPrimary(g.primary, lines, !weekly);
         renderOthers(g.others, lines);
       }
+      renderNoFacts(sb.noFacts, lines);
     }
   }
 

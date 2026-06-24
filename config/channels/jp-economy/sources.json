@@ -1,1 +1,63 @@
-[]
+[
+  {
+    "id": "boj-whatsnew",
+    "name": "日本銀行 公表資料",
+    "url": "https://www.boj.or.jp/rss/whatsnew.rdf",
+    "category": "金融政策・中央銀行",
+    "enabled": true,
+    "_note": "日銀公式RSS。金融政策決定会合・各種公表の一次情報"
+  },
+  {
+    "id": "cao-news",
+    "name": "内閣府 新着情報",
+    "url": "https://www.cao.go.jp/rss/news.rdf",
+    "category": "政府・統計",
+    "enabled": true,
+    "_note": "内閣府公式RSS。景気動向指数・月例経済報告など。URL要確認"
+  },
+  {
+    "id": "mof-news",
+    "name": "財務省 新着情報",
+    "url": "https://www.mof.go.jp/",
+    "type": "html",
+    "category": "政府・統計",
+    "enabled": false,
+    "_note": "RSSパス未確認。汎用HTML抽出/自動フィード発見で取得可否を確認"
+  },
+  {
+    "id": "meti-news",
+    "name": "経済産業省 新着情報",
+    "url": "https://www.meti.go.jp/",
+    "type": "html",
+    "category": "政府・統計",
+    "enabled": false,
+    "_note": "RSSパス未確認。汎用HTML抽出/自動フィード発見で取得可否を確認"
+  },
+  {
+    "id": "stat-go",
+    "name": "総務省統計局 新着",
+    "url": "https://www.stat.go.jp/",
+    "type": "html",
+    "category": "政府・統計",
+    "enabled": false,
+    "_note": "CPI・労働力調査など。RSSパス未確認・要調査"
+  },
+  {
+    "id": "reuters-jp-economy",
+    "name": "ロイター 日本 経済",
+    "url": "https://jp.reuters.com/markets/",
+    "type": "html",
+    "category": "報道・解説",
+    "enabled": false,
+    "_note": "Bot対策で弾かれやすい。取得可否を要確認"
+  },
+  {
+    "id": "toyokeizai",
+    "name": "東洋経済オンライン",
+    "url": "https://toyokeizai.net/",
+    "type": "html",
+    "category": "報道・解説",
+    "enabled": false,
+    "_note": "景気・マクロ記事。フィード/抽出可否を要確認"
+  }
+]

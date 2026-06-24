@@ -2,17 +2,27 @@
 // 並び順・件数・グルーピングが両者で必ず一致する。スコア付与・カテゴリ/ソース集約・
 // 系列集約・並べ替え・目次素材の組み立てをここに集約する(描画はしない)。
 import type { CurationConfig, ReportPeriod, RunResult, SummarizedItem } from "../types.js";
-import { applyScores, groupBySeries, type SeriesGroup } from "../curation/score.js";
+import { applyScores, groupBySeries, isNoFacts, type SeriesGroup } from "../curation/score.js";
 
 /** レポートの種別。daily=日次(配信), weekly=期間振り返り(最大15日)。 */
 export type ReportKind = "daily" | "weekly";
 
+/** ファクト抽出なし記事のリンク(本文は出さず、ソース末尾に折りたたみで列挙)。 */
+export interface NoFactLink {
+  title: string;
+  url: string;
+  publishedAt: string | null;
+}
+
 /** 1ソース分のブロック(系列集約済み)。 */
 export interface SourceBlock {
   sourceName: string;
-  /** このソースの総記事数(代表+同系列の関連)。 */
+  /** このソースの総記事数(ファクトあり代表+同系列の関連 + ファクトなし)。 */
   count: number;
+  /** ファクトを抽出できた記事(見出し+本文で描画)。 */
   groups: SeriesGroup[];
+  /** ファクト抽出なし記事(タイトル+リンクのみ。末尾に折りたたみ)。 */
+  noFacts: NoFactLink[];
 }
 
 /** 1カテゴリ分のブロック。 */
@@ -114,8 +124,14 @@ export function buildReportModel(
   for (const [category, sources] of byCategory) {
     const srcBlocks: SourceBlock[] = [];
     for (const [sourceName, items] of sources) {
-      const groups = groupBySeries(items, curation.groupReleaseSeries);
-      srcBlocks.push({ sourceName, count: blockCount(groups), groups });
+      // ファクトあり/なしで分離。なしは本文を出さず末尾リンクに回す(スコア降順)。
+      const factful = items.filter((it) => !isNoFacts(it.summary));
+      const noFacts: NoFactLink[] = items
+        .filter((it) => isNoFacts(it.summary))
+        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+        .map((it) => ({ title: it.title, url: it.url, publishedAt: it.publishedAt }));
+      const groups = groupBySeries(factful, curation.groupReleaseSeries);
+      srcBlocks.push({ sourceName, count: blockCount(groups) + noFacts.length, groups, noFacts });
     }
     if (curation.rankByScore) srcBlocks.sort((a, b) => groupTop(b.groups) - groupTop(a.groups));
     const count = srcBlocks.reduce((a, s) => a + s.count, 0);

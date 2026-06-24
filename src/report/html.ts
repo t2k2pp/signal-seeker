@@ -2,7 +2,7 @@
 // Markdown と同じ ReportModel から描くため内容は必ず一致する。
 // 外部CSS/JS/フォント/画像に依存しない完全自己完結HTML(単体で開ける・持ち運べる)。
 import type { AttentionMetrics, SummarizedItem } from "../types.js";
-import { anchor, type ReportModel, type SourceBlock } from "./model.js";
+import { anchor, type NoFactLink, type ReportModel, type SourceBlock } from "./model.js";
 
 /** 固定テーマ。実行ごとに変えない(配色は1か所に集約)。 */
 const THEME = {
@@ -101,6 +101,20 @@ function renderArticle(item: SummarizedItem, showState: boolean): string {
     </article>`;
 }
 
+/** ファクト抽出なし記事をソースカード末尾に折りたたみでリンク列挙する。 */
+function renderNoFactsHtml(noFacts: NoFactLink[]): string {
+  if (noFacts.length === 0) return "";
+  const items = noFacts
+    .map(
+      (n) =>
+        `<li><a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a>${
+          n.publishedAt ? ` <span class="date">${esc(n.publishedAt)}</span>` : ""
+        }</li>`,
+    )
+    .join("");
+  return `<details class="others"><summary>参考(ファクト抽出なし) ${noFacts.length}件</summary><ul>${items}</ul></details>`;
+}
+
 function renderSourceCard(sb: SourceBlock, showState: boolean): string {
   const groups = sb.groups
     .map((g) => {
@@ -121,6 +135,7 @@ function renderSourceCard(sb: SourceBlock, showState: boolean): string {
     <div class="card">
       <div class="card-head"><span class="src-name">${esc(sb.sourceName)}</span><span class="src-count">${sb.count}</span></div>
       ${groups}
+      ${renderNoFactsHtml(sb.noFacts)}
     </div>`;
 }
 

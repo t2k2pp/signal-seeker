@@ -1,1 +1,66 @@
-[]
+[
+  {
+    "id": "fed-press",
+    "name": "Federal Reserve 報道発表",
+    "url": "https://www.federalreserve.gov/feeds/press_all.xml",
+    "category": "政策・金融当局",
+    "enabled": true,
+    "_note": "FRB公式RSS。金利・金融政策の一次情報"
+  },
+  {
+    "id": "sec-press",
+    "name": "SEC Press Releases",
+    "url": "https://www.sec.gov/news/pressreleases.rss",
+    "category": "政策・金融当局",
+    "enabled": true,
+    "_note": "米証券取引委員会の公式RSS"
+  },
+  {
+    "id": "bls-news",
+    "name": "BLS 経済指標リリース",
+    "url": "https://www.bls.gov/feed/bls_latest.rss",
+    "category": "政策・金融当局",
+    "enabled": false,
+    "_note": "雇用統計・CPI等。URL要確認(米労働統計局)"
+  },
+  {
+    "id": "cnbc-topnews",
+    "name": "CNBC Top News",
+    "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114",
+    "category": "市場ニュース",
+    "enabled": true,
+    "_note": "CNBC公式RSS。id差し替えでセクション変更可"
+  },
+  {
+    "id": "cnbc-finance",
+    "name": "CNBC Finance",
+    "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664",
+    "category": "市場ニュース",
+    "enabled": false,
+    "_note": "id=10000664(Markets/Finance)。重複しがちなので必要時にenable"
+  },
+  {
+    "id": "wsj-markets",
+    "name": "WSJ Markets",
+    "url": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+    "category": "市場ニュース",
+    "enabled": true,
+    "_note": "WSJ公式RSS。全文は会員制だが見出し・要旨は取得可"
+  },
+  {
+    "id": "marketwatch-top",
+    "name": "MarketWatch Top Stories",
+    "url": "http://feeds.marketwatch.com/marketwatch/topstories/",
+    "category": "市場ニュース",
+    "enabled": false,
+    "_note": "RSSの安定性が落ちているため要確認"
+  },
+  {
+    "id": "seekingalpha-news",
+    "name": "Seeking Alpha Market News",
+    "url": "https://seekingalpha.com/market_news/all.xml",
+    "category": "個別銘柄・分析",
+    "enabled": false,
+    "_note": "Bot対策で弾かれやすい。取得可否を要確認"
+  }
+]

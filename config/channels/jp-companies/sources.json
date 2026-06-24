@@ -1,1 +1,53 @@
-[]
+[
+  {
+    "id": "prtimes",
+    "name": "PR TIMES 新着",
+    "url": "https://prtimes.jp/index.rdf",
+    "category": "プレスリリース",
+    "enabled": true,
+    "_note": "PR TIMES公式RSS。国内企業のプレスリリース横断。件数が多いので要スクリーニング"
+  },
+  {
+    "id": "itmedia-business",
+    "name": "ITmedia ビジネス",
+    "url": "https://rss.itmedia.co.jp/rss/2.0/business.xml",
+    "category": "企業報道",
+    "enabled": true,
+    "_note": "ITmedia公式RSS。企業・経営ニュース"
+  },
+  {
+    "id": "itmedia-news",
+    "name": "ITmedia NEWS",
+    "url": "https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml",
+    "category": "企業報道",
+    "enabled": false,
+    "_note": "速報。テック寄りでai-techと重複しがち。必要時にenable"
+  },
+  {
+    "id": "jpx-disclosure",
+    "name": "日本取引所グループ 新着",
+    "url": "https://www.jpx.co.jp/",
+    "type": "html",
+    "category": "適時開示・IR",
+    "enabled": false,
+    "_note": "TDnet適時開示はRSS無し。JPXトップの汎用抽出/自動フィード発見で可否を確認。本格対応はTDnet APIが必要(要相談)"
+  },
+  {
+    "id": "toyokeizai-company",
+    "name": "東洋経済オンライン(企業)",
+    "url": "https://toyokeizai.net/",
+    "type": "html",
+    "category": "企業報道",
+    "enabled": false,
+    "_note": "企業・決算記事。フィード/抽出可否を要確認(jp-economyと重複注意)"
+  },
+  {
+    "id": "diamond-online",
+    "name": "ダイヤモンド・オンライン",
+    "url": "https://diamond.jp/",
+    "type": "html",
+    "category": "企業報道",
+    "enabled": false,
+    "_note": "企業・経営記事。フィード/抽出可否を要確認"
+  }
+]
