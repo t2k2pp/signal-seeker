@@ -1,0 +1,247 @@
+/* ダーク・ダッシュボード配色(src/report/html.ts の THEME に揃える)。 */
+:root {
+  color-scheme: dark;
+  --bg: #0b1220;
+  --panel: #131c2e;
+  --card: #1a2740;
+  --border: #243049;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #22d3ee;
+  --accent-soft: #0e7490;
+  --score: #fbbf24;
+  --new: #22c55e;
+  --updated: #f59e0b;
+  --carried: #64748b;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  line-height: 1.7;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+.wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 18px 64px;
+}
+/* ナビ */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: linear-gradient(135deg, var(--panel), var(--card));
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.brand {
+  font-weight: 700;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand .dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+.nav a {
+  color: var(--text);
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+.nav a.active {
+  background: var(--accent-soft);
+  color: #fff;
+}
+.nav .spacer {
+  flex: 1;
+}
+.nav select,
+.search-box input {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 14px;
+}
+/* 共通 */
+.muted {
+  color: var(--muted);
+}
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.pill {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 11px;
+  font-size: 13px;
+}
+.chip {
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 11px;
+}
+.score {
+  color: var(--score);
+  font-weight: 700;
+}
+.state {
+  flex: none;
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  color: #0b1220;
+  font-weight: 700;
+}
+.cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 760px) {
+  .cards.two {
+    grid-template-columns: 1fr 1fr;
+  }
+  .cards.three {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+.card h3 {
+  margin: 0 0 8px;
+}
+.item {
+  padding: 10px 0;
+  border-top: 1px dashed var(--border);
+}
+.item:first-child {
+  border-top: none;
+}
+.item .head {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.item .title {
+  font-weight: 600;
+  color: var(--text);
+}
+.item .meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  margin: 4px 0;
+}
+.summary ul {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+.summary li {
+  margin: 2px 0;
+}
+.summary p {
+  margin: 4px 0;
+}
+h1 {
+  font-size: 22px;
+}
+h2 {
+  font-size: 18px;
+  border-left: 4px solid var(--accent);
+  padding-left: 10px;
+}
+table.src {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+table.src th,
+table.src td {
+  border-bottom: 1px solid var(--border);
+  padding: 7px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+button {
+  background: var(--accent-soft);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+button.ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+button.danger {
+  background: #7f1d1d;
+}
+input,
+select,
+textarea {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-size: 14px;
+}
+.toggle {
+  cursor: pointer;
+}
+.err {
+  color: #fca5a5;
+  background: #3f1d1d;
+  border: 1px solid #7f1d1d;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.empty {
+  color: var(--muted);
+  font-style: italic;
+}
+details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+}

@@ -6,10 +6,8 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { channelArg, resolveChannel, selectChannelIds } from "../channel.js";
-import type { RunResult } from "../types.js";
-import { buildReportModel } from "./model.js";
 import { renderHtml } from "./html.js";
-import { resolveSnapshot, type ReportSnapshot, type SnapshotSelector } from "./snapshot.js";
+import { modelFromSnapshot, resolveSnapshot, type ReportSnapshot, type SnapshotSelector } from "./snapshot.js";
 import { notifyDiscord, discordOptions } from "../notify/discord.js";
 
 // `--flag value` と `--flag=value` の両形に対応する(npm 経由では `=` 形式を推奨)。
@@ -68,21 +66,8 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // スナップショットから RunResult を再構成し、Markdown と同じモデルを組む(内容一致)。
-  const result: RunResult = {
-    runId: snap.runId,
-    startedAt: snap.generatedAt,
-    finishedAt: snap.generatedAt,
-    summarized: snap.summarized,
-    errors: [],
-  };
-  const model = buildReportModel(result, config.curation, {
-    runId: snap.runId,
-    date: snap.date, // 過去回の再描画では当時の日付/期間末を使う
-    kind: snap.kind ?? "daily",
-    period: snap.period ?? null,
-    channelName: channel.name,
-  });
+  // スナップショットから Markdown と同じモデルを組む(内容一致)。infographic と Web API で共有。
+  const model = modelFromSnapshot(snap, config.curation, channel.name);
 
   const html = renderHtml(model);
   const fileName = `report-${snap.runLabel}.html`;

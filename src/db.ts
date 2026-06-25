@@ -113,6 +113,8 @@ export interface Store {
   listItems(filter: ItemFilter): StoredItem[];
   searchItems(text: string, limit?: number): StoredItem[];
   getItem(sourceId: string, itemKey: string): StoredItem | null;
+  searchItemsFts(text: string, limit?: number): StoredItem[];
+  ftsAvailable(): boolean;
   recentRuns(limit?: number): RunRow[];
   startRun(dryRun: boolean, logLabel: string): number;
   finishRun(runId: number, status: "completed" | "failed", newCount: number, error?: string): void;
@@ -124,7 +126,13 @@ export interface Store {
 export class SqliteStore implements Store {
   private db: Database.Database;
 
-  constructor(dbPath = join(DATA_DIR, "signalseeker.db")) {
+  constructor(dbPath = join(DATA_DIR, "signalseeker.db"), opts: { readonly?: boolean } = {}) {
+    if (opts.readonly) {
+      // 読み取り専用(Webサーバ用)。DBはCLIが作成・マイグレ済み前提。
+      // mkdir / WAL pragma / migrate(=書き込み)は行わない。WAL読みは収集中でも安全。
+      this.db = new Database(dbPath, { readonly: true, fileMustExist: true });
+      return;
+    }
     mkdirSync(DATA_DIR, { recursive: true });
     this.db = new Database(dbPath);
     this.db.pragma("journal_mode = WAL");
@@ -181,6 +189,44 @@ export class SqliteStore implements Store {
     );
     if (!runCols.has("status")) this.db.exec("ALTER TABLE runs ADD COLUMN status TEXT NOT NULL DEFAULT 'running'");
     if (!runCols.has("log_label")) this.db.exec("ALTER TABLE runs ADD COLUMN log_label TEXT");
+
+    this.migrateFts();
+  }
+
+  /**
+   * 全文検索(FTS5)を用意する。日本語(分かち書きなし)に対応するため trigram トークナイザを使う
+   * (3文字以上の部分一致を索引で引ける)。items への INSERT/UPDATE/DELETE をトリガで常時同期し、
+   * 既存データには初回バックフィルする。Web の横断検索が高速・実用的になる。
+   */
+  private migrateFts(): void {
+    this.db.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS items_fts USING fts5(
+        source_id UNINDEXED, item_key UNINDEXED,
+        title, summary, raw_text,
+        tokenize='trigram'
+      );
+      CREATE TRIGGER IF NOT EXISTS items_fts_ai AFTER INSERT ON items BEGIN
+        INSERT INTO items_fts(rowid, source_id, item_key, title, summary, raw_text)
+        VALUES (new.rowid, new.source_id, new.item_key, new.title, COALESCE(new.summary,''), new.raw_text);
+      END;
+      CREATE TRIGGER IF NOT EXISTS items_fts_ad AFTER DELETE ON items BEGIN
+        DELETE FROM items_fts WHERE rowid = old.rowid;
+      END;
+      CREATE TRIGGER IF NOT EXISTS items_fts_au AFTER UPDATE ON items BEGIN
+        DELETE FROM items_fts WHERE rowid = old.rowid;
+        INSERT INTO items_fts(rowid, source_id, item_key, title, summary, raw_text)
+        VALUES (new.rowid, new.source_id, new.item_key, new.title, COALESCE(new.summary,''), new.raw_text);
+      END;
+    `);
+    // 既存データの初回バックフィル(fts が空で items が在るときだけ)
+    const ftsCount = (this.db.prepare("SELECT COUNT(*) c FROM items_fts").get() as { c: number }).c;
+    const itemCount = (this.db.prepare("SELECT COUNT(*) c FROM items").get() as { c: number }).c;
+    if (ftsCount === 0 && itemCount > 0) {
+      this.db.exec(`
+        INSERT INTO items_fts(rowid, source_id, item_key, title, summary, raw_text)
+        SELECT rowid, source_id, item_key, title, COALESCE(summary,''), raw_text FROM items;
+      `);
+    }
   }
 
   /**
@@ -328,6 +374,26 @@ export class SqliteStore implements Store {
         )
         .all(like, like, like, limit) as ItemRow[]
     ).map(rowToStored);
+  }
+
+  /** FTS5(trigram)による全文検索。3文字以上で有効(2文字以下は呼び出し側が searchItems=LIKE を使う)。 */
+  searchItemsFts(text: string, limit = 50): StoredItem[] {
+    // FTS5 の特殊記号を避けるため二重引用符で囲む(内部の " は "" にエスケープ)。
+    const q = `"${text.replace(/"/g, '""')}"`;
+    const rows = this.db
+      .prepare(
+        "SELECT i.* FROM items_fts f JOIN items i ON i.rowid = f.rowid WHERE items_fts MATCH ? ORDER BY rank LIMIT ?",
+      )
+      .all(q, limit) as ItemRow[];
+    return rows.map(rowToStored);
+  }
+
+  /** items_fts(全文検索テーブル)が存在するか。未マイグレーションの旧DB判定に使う。 */
+  ftsAvailable(): boolean {
+    const row = this.db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='items_fts'")
+      .get();
+    return !!row;
   }
 
   getItem(sourceId: string, itemKey: string): StoredItem | null {

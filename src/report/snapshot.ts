@@ -2,8 +2,8 @@
 // 契約になり、収集・要約を再実行せずに同一内容を後からHTML等へ再描画できる。
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ReportPeriod, RunResult, SummarizedItem } from "../types.js";
-import type { ReportKind } from "./model.js";
+import type { CurationConfig, ReportPeriod, RunResult, SummarizedItem } from "../types.js";
+import { buildReportModel, type ReportKind, type ReportModel } from "./model.js";
 
 /** 1回のレポートの素データ。SummarizedItem をそのまま保持する(再描画に必要十分)。 */
 export interface ReportSnapshot {
@@ -60,8 +60,33 @@ export function readSnapshot(path: string): ReportSnapshot {
   return JSON.parse(readFileSync(path, "utf-8")) as ReportSnapshot;
 }
 
+/**
+ * スナップショットから RunResult を再構成し、Markdown/HTML と同一の ReportModel を組む。
+ * 収集・要約を再実行せずに後から再描画する共通入口(infographic CLI と Web API が共有)。
+ */
+export function modelFromSnapshot(
+  snap: ReportSnapshot,
+  curation: CurationConfig,
+  channelName: string | null,
+): ReportModel {
+  const result: RunResult = {
+    runId: snap.runId,
+    startedAt: snap.generatedAt,
+    finishedAt: snap.generatedAt,
+    summarized: snap.summarized,
+    errors: [],
+  };
+  return buildReportModel(result, curation, {
+    runId: snap.runId,
+    date: snap.date,
+    kind: snap.kind ?? "daily",
+    period: snap.period ?? null,
+    channelName,
+  });
+}
+
 /** reportsDir 配下の全スナップショットを generatedAt 降順(新しい順)で返す。 */
-function listSnapshots(reportsDir: string): ReportSnapshot[] {
+export function listSnapshots(reportsDir: string): ReportSnapshot[] {
   let names: string[];
   try {
     names = readdirSync(reportsDir);

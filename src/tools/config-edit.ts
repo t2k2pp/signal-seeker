@@ -12,7 +12,8 @@ import { createInterface } from "node:readline/promises";
 import { join } from "node:path";
 import { CHANNELS_DIR, loadRawConfig, saveRawConfig, loadAllSources, saveSources, loadConfig } from "../config.js";
 import { channelsOrExit, resolveChannel } from "../channel.js";
-import type { Source, SourceType } from "../types.js";
+import { assembleSource } from "../server/sources.js";
+import type { Source } from "../types.js";
 
 // 対象チャンネル(1つ)を解決し、その config/sources を編集対象にする。
 const _ids = channelsOrExit();
@@ -213,30 +214,35 @@ async function runInteractive(): Promise<void> {
 }
 
 async function addSourceInteractive(ask: (q: string) => Promise<string>): Promise<void> {
-  const id = (await ask("id> ")).trim();
-  const name = (await ask("name> ")).trim();
-  const url = (await ask("url> ")).trim();
-  const type = ((await ask("type (rss/html/github_release) [rss]> ")).trim() || "rss") as SourceType;
-  const category = (await ask("category> ")).trim() || "未分類";
-  if (!id || !name || !url) {
-    console.warn("id/name/url は必須です。中止しました。");
+  const input: Record<string, unknown> = {
+    id: (await ask("id> ")).trim(),
+    name: (await ask("name> ")).trim(),
+    url: (await ask("url> ")).trim(),
+    type: (await ask("type (rss/html/github_release) [rss]> ")).trim() || "rss",
+    category: (await ask("category> ")).trim() || "未分類",
+  };
+  if (input.type === "html") {
+    const selector = (await ask("selector (html一覧リンク) [a]> ")).trim();
+    if (selector) input.selector = selector;
+    const maxLinks = (await ask("maxLinks [15]> ")).trim();
+    if (maxLinks) input.maxLinks = maxLinks;
+  }
+  // 検証・組み立ては Web API と共有(src/server/sources.ts)。
+  let src: Source;
+  try {
+    src = assembleSource(input);
+  } catch (err) {
+    console.warn(`入力が不正です: ${(err as Error).message}。中止しました。`);
     return;
   }
-  const src: Source = { id, name, url, type, category, enabled: true };
-  if (type === "html") {
-    const selector = (await ask("selector (html一覧リンク) [a]> ")).trim();
-    if (selector) src.selector = selector;
-    const maxLinks = (await ask("maxLinks [15]> ")).trim();
-    if (maxLinks) src.maxLinks = Number(maxLinks);
-  }
   const sources = loadAllSources(SOURCES_PATH);
-  if (sources.some((s) => s.id === id)) {
-    console.warn(`同じID(${id})が既に存在します。中止しました。`);
+  if (sources.some((s) => s.id === src.id)) {
+    console.warn(`同じID(${src.id})が既に存在します。中止しました。`);
     return;
   }
   sources.push(src);
   saveSources(SOURCES_PATH, sources);
-  console.log(`追加: ${id}`);
+  console.log(`追加: ${src.id}`);
 }
 
 const interactive = cliArgs.length === 0;
