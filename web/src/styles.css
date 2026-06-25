@@ -245,3 +245,238 @@ details summary {
   color: var(--muted);
   font-size: 13px;
 }
+
+/* ===== 「魅せる」拡張(B: スコア可視化/ヒーロー, A: 動く概要, C: 発見の演出) ===== */
+
+/* A: 全体サマリの大きな数字(カウントアップ) */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 6px 0 24px;
+}
+@media (min-width: 760px) {
+  .metrics {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.metric {
+  background: linear-gradient(135deg, var(--panel), var(--card));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+.metric-num {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+.metric-sub {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-left: 4px;
+}
+.metric-label {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* A: チャンネルカードの鼓動 + スパークライン */
+.card.chan {
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+.card.chan:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-soft);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+}
+.chan-live {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+}
+.live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--new);
+  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
+  animation: pulse-dot 2s infinite;
+  flex: none;
+}
+.live-dot.err {
+  background: #f87171;
+  box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.6);
+  animation: none;
+}
+@keyframes pulse-dot {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+.spark {
+  display: block;
+}
+
+/* B: スコアの横ゲージ(上位は発光) */
+.scorebar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  flex: none;
+}
+.scorebar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, var(--accent-soft), var(--accent));
+  border-radius: 999px;
+}
+.scorebar-val {
+  position: relative;
+  z-index: 1;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  padding: 0 8px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.scorebar.hot {
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+}
+.scorebar.hot .scorebar-fill {
+  background: linear-gradient(90deg, var(--accent), #67e8f9);
+}
+
+/* B: 順位バッジ */
+.rank {
+  flex: none;
+  width: 30px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.rank.gold,
+.rank.silver,
+.rank.bronze {
+  font-size: 20px;
+}
+.rankrow {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-top: 1px dashed var(--border);
+}
+.rankrow:first-child {
+  border-top: none;
+}
+
+/* B: ヒーローカード(最重要1件を大きく) */
+.hero {
+  display: flex;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.12), var(--card));
+  border: 1px solid var(--accent-soft);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(34, 211, 238, 0.15);
+}
+.hero-rank {
+  font-size: 34px;
+  line-height: 1;
+  flex: none;
+}
+.hero-tags {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.hero-title {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 2px 0;
+}
+.hero-title:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
+.hero-summary {
+  font-size: 14px;
+  margin: 6px 0;
+}
+
+/* C: 注目度ミニ棒(満たし具合で大小が伝わる) */
+.attn {
+  border: 1px solid;
+  border-radius: 6px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* C: 新着の輝き */
+.new-badge {
+  flex: none;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #052e16;
+  background: var(--new);
+  border-radius: 5px;
+  padding: 1px 6px;
+  animation: pulse-badge 1.8s ease-in-out infinite;
+}
+.new-badge.sm {
+  font-size: 10px;
+  padding: 0 5px;
+}
+@keyframes pulse-badge {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+  }
+  50% {
+    opacity: 0.85;
+    box-shadow: 0 0 8px 1px rgba(34, 197, 94, 0.45);
+  }
+}
+.item.hot {
+  position: relative;
+}
+.item.hot::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}

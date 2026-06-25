@@ -7,6 +7,10 @@ export interface ChannelSummary {
   sourcesEnabled: number;
   discordConfigured: boolean;
   stats: { total: number; summarized: number; pending: number; needingSummary: number } | null;
+  /** 直近の収集ごとの新着件数(古い→新しい)。スパークライン用。 */
+  activity: number[];
+  /** 最終収集の時刻・状態・新着件数(未収集なら null)。 */
+  lastRun: { at: string | null; status: string; newCount: number } | null;
 }
 
 export interface Attention {

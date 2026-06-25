@@ -74,15 +74,25 @@ export function buildRouter(): Router {
   const router = new Router();
 
   // 全チャンネル一覧(stats 概要付き。webhook URL は出さず有無のみ)。
+  // 概要ダッシュボードの「動き」用に、直近の収集活動(新着件数の推移)と最終収集も返す。
   router.get("/api/channels", () => {
     return listChannels().map((id) => {
       const ch = resolveChannel(id);
       let stats: { total: number; summarized: number; pending: number; needingSummary: number } | null = null;
+      let activity: number[] = [];
+      let lastRun: { at: string | null; status: string; newCount: number } | null = null;
       try {
         const store = new SqliteStore(ch.paths.db, { readonly: true });
         try {
           const s = store.stats();
           stats = { total: s.total, summarized: s.summarized, pending: s.pending, needingSummary: s.needingSummary };
+          const runs = store.recentRuns(14); // 新しい順
+          // スパークライン用に古い→新しいの新着件数列にする。
+          activity = runs.map((r) => r.new_count).reverse();
+          const latest = runs[0];
+          if (latest) {
+            lastRun = { at: latest.finished_at ?? latest.started_at, status: latest.status, newCount: latest.new_count };
+          }
         } finally {
           store.close();
         }
@@ -95,6 +105,8 @@ export function buildRouter(): Router {
         sourcesEnabled: ch.sources.length,
         discordConfigured: !!ch.discordWebhook,
         stats,
+        activity,
+        lastRun,
       };
     });
   });

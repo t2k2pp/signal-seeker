@@ -1,6 +1,9 @@
 // 共通の表示部品(レポート描画と見た目を揃える)。
 import { Link } from "react-router-dom";
 import type { Attention, Item } from "./api";
+import { AttentionChips, ScoreBar } from "./viz";
+
+export { AttentionChips };
 
 export function Loading() {
   return <p className="muted">読み込み中…</p>;
@@ -12,35 +15,6 @@ export function ErrorMsg({ error }: { error: string }) {
 export function Score({ value }: { value?: number }) {
   if (value == null) return null;
   return <span className="score">★{value.toFixed(2)}</span>;
-}
-
-const CHIP_COLORS: Record<string, string> = {
-  hf: "#a78bfa",
-  cite: "#38bdf8",
-  react: "#f472b6",
-  star: "#fbbf24",
-  pre: "#f87171",
-};
-function k(n: number) {
-  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
-}
-export function AttentionChips({ a }: { a?: Attention | null }) {
-  if (!a) return null;
-  const chips: { t: string; c: string }[] = [];
-  if (a.hfUpvotes != null) chips.push({ t: `👍HF ${a.hfUpvotes}`, c: CHIP_COLORS.hf });
-  if (a.citationCount != null) chips.push({ t: `引用 ${a.citationCount}`, c: CHIP_COLORS.cite });
-  if (a.ghReactions != null) chips.push({ t: `💬 ${a.ghReactions}`, c: CHIP_COLORS.react });
-  if (a.ghStars != null) chips.push({ t: `⭐${k(a.ghStars)}`, c: CHIP_COLORS.star });
-  if (a.prerelease) chips.push({ t: "⚠prerelease", c: CHIP_COLORS.pre });
-  return (
-    <>
-      {chips.map((c, i) => (
-        <span key={i} className="chip" style={{ borderColor: c.c, color: c.c }}>
-          {c.t}
-        </span>
-      ))}
-    </>
-  );
 }
 
 /** 要約の "- " 箇条書きを <ul> に、それ以外を <p> に。 */
@@ -78,32 +52,36 @@ export function Summary({ text }: { text: string | null }) {
   return <div className="summary">{blocks}</div>;
 }
 
-/** 記事1件(タイトル・スコア・注目度・要約)。channelId があれば詳細リンクを張る。 */
+/** 記事1件(タイトル・スコア・注目度・要約)。channelId があれば詳細リンクを張る。
+ *  scoreMax を渡すとスコアを相対ゲージ(発光つき)で見せる。 */
 export function ItemRow({
   item,
   channelId,
   showSummary = true,
+  scoreMax,
 }: {
   item: Item;
   channelId: string;
   showSummary?: boolean;
+  scoreMax?: number;
 }) {
   const detail = `/c/${channelId}/item/${encodeURIComponent(item.sourceId)}/${encodeURIComponent(item.itemKey)}`;
+  const hot = scoreMax != null && item.score != null && scoreMax > 0 && item.score / scoreMax >= 0.8;
   return (
-    <div className="item">
+    <div className={`item${hot ? " hot" : ""}`}>
       <div className="head">
         <Link className="title" to={detail}>
           {item.title}
         </Link>
+        {!item.reported && <span className="new-badge">NEW</span>}
       </div>
       <div className="meta">
-        <Score value={item.score} />
+        {scoreMax != null ? <ScoreBar value={item.score} max={scoreMax} /> : <Score value={item.score} />}
         <AttentionChips a={item.attention} />
         <span className="muted">
           {item.category} / {item.sourceName}
         </span>
         {item.publishedAt && <span className="muted">{item.publishedAt}</span>}
-        {!item.reported && <span className="pill" style={{ color: "var(--new)" }}>未配信</span>}
       </div>
       {showSummary && <Summary text={item.summary} />}
       <div className="meta">

@@ -61,9 +61,13 @@ export default function Channel() {
       {items.loading && <Loading />}
       {items.error && <ErrorMsg error={items.error} />}
       <div className="card">
-        {(items.data ?? []).map((it) => (
-          <ItemRow key={`${it.sourceId}:${it.itemKey}`} item={it} channelId={id} />
-        ))}
+        {(() => {
+          const data = items.data ?? [];
+          const scoreMax = data.reduce((m, it) => Math.max(m, it.score ?? 0), 0);
+          return data.map((it) => (
+            <ItemRow key={`${it.sourceId}:${it.itemKey}`} item={it} channelId={id} scoreMax={scoreMax} />
+          ));
+        })()}
         {items.data && items.data.length === 0 && <p className="empty">該当する記事がありません。</p>}
       </div>
     </div>
